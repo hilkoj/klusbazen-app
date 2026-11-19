@@ -49,7 +49,21 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          echo "$KEYSTORE_BASE64" | base64 --decode > release.jks
+          # Strip eventuele onzichtbare enters uit de secrets
+          export KEYSTORE_PASSWORD="$(printf '%s' "$KEYSTORE_PASSWORD" | tr -d '\r\n')"
+          export KEY_PASSWORD="$(printf '%s' "$KEY_PASSWORD" | tr -d '\r\n')"
+          export KEY_ALIAS="$(printf '%s' "$KEY_ALIAS" | tr -d '\r\n')"
+
+          echo "Check: lengte KEYSTORE_PASSWORD = ${#KEYSTORE_PASSWORD} tekens"
+          echo "Check: lengte KEY_PASSWORD = ${#KEY_PASSWORD} tekens"
+          echo "Check: KEY_ALIAS = '$KEY_ALIAS'"
+
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
+            echo "❌ Een of meer GitHub Secrets zijn leeg! Controleer de exacte spelling onder Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+
+          printf '%s' "$KEYSTORE_BASE64" | tr -d '\n\r ' | base64 --decode > release.jks
           BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1)
 
           "$BUILD_TOOLS/zipalign" -v -p 4 \
@@ -59,8 +73,8 @@ jobs:
           "$BUILD_TOOLS/apksigner" sign \
             --ks release.jks \
             --ks-key-alias "$KEY_ALIAS" \
-            --ks-pass "pass:$KEYSTORE_PASSWORD" \
-            --key-pass "pass:$KEY_PASSWORD" \
+            --ks-pass env:KEYSTORE_PASSWORD \
+            --key-pass env:KEY_PASSWORD \
             --out "KlusBazen-v1.0.${{ github.run_number }}.apk" \
             app-aligned.apk
 
@@ -72,3 +86,4 @@ jobs:
         with:
           name: KlusBazen-v1.0.${{ github.run_number }}-APK
           path: KlusBazen-v1.0.${{ github.run_number }}.apk
+
