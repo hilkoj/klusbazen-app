@@ -50,34 +50,67 @@ jobs:
             exit 1
           fi
           echo "✅ Bronlogo gevonden: $SOURCE_LOGO"
-          file "$SOURCE_LOGO"
 
-          # Zet het bronlogo altijd om naar echte 1024x1024 PNG's via sharp (meegeleverd met @capacitor/assets)
+          # Maak alle 4 bestanden die @capacitor/assets nodig heeft voor moderne Android Adaptive Icons
           node -e "
             const sharp = require('sharp');
             const src = process.argv[1];
             (async () => {
-              await sharp(src).resize(1024, 1024, { fit: 'cover' }).png().toFile('assets/icon-only.png.tmp');
-              await sharp(src).resize(2732, 2732, { fit: 'contain', background: '#153E75' }).png().toFile('assets/splash.png.tmp');
-              console.log('✅ Logo succesvol geconverteerd naar echte PNG-bestanden');
+              // 1. Standaard icoon (1024x1024)
+              await sharp(src)
+                .resize(1024, 1024, { fit: 'cover' })
+                .png()
+                .toFile('assets/icon-only.png.tmp');
+
+              // 2. Adaptive Icon voorgrond (700x700 gecentreerd op 1024x1024 zodat ronde maskers niets afsnijden)
+              const fgLogo = await sharp(src)
+                .resize(700, 700, { fit: 'contain', background: '#153E75' })
+                .png()
+                .toBuffer();
+
+              await sharp({
+                create: { width: 1024, height: 1024, channels: 4, background: '#153E75' }
+              })
+                .composite([{ input: fgLogo, gravity: 'center' }])
+                .png()
+                .toFile('assets/icon-foreground.png');
+
+              // 3. Adaptive Icon achtergrond (effen donkerblauw)
+              await sharp({
+                create: { width: 1024, height: 1024, channels: 4, background: '#153E75' }
+              })
+                .png()
+                .toFile('assets/icon-background.png');
+
+              // 4. Opstartscherm (splash screen)
+              await sharp(src)
+                .resize(2732, 2732, { fit: 'contain', background: '#153E75' })
+                .png()
+                .toFile('assets/splash.png.tmp');
+
+              console.log('✅ Alle 4 asset-PNGs (incl. Adaptive Icon) succesvol aangemaakt');
             })().catch(err => { console.error(err); process.exit(1); });
           " "$SOURCE_LOGO"
 
           mv assets/icon-only.png.tmp assets/icon-only.png
           mv assets/splash.png.tmp assets/splash.png
 
-          echo "=== Check geconverteerde PNG-bestanden ==="
-          file assets/icon-only.png assets/splash.png
+          # Bewaar de hash van het standaard Capacitor-icoon VOOR het genereren
+          BEFORE_HASH=$(md5sum android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png | awk '{print $1}')
 
           echo "=== Genereer Android iconen & splash screens ==="
           npx capacitor-assets generate --android --iconBackgroundColor '#153E75' --splashBackgroundColor '#153E75'
 
-          echo "=== Verificatie: gegenereerde Android mipmap-bestanden ==="
-          ls -lh android/app/src/main/res/mipmap-xxxhdpi/
-          if [ ! -f "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png" ]; then
-            echo "❌ Waarschuwing: ic_launcher_foreground.png is niet aangemaakt!"
+          # Controleer of ic_launcher_foreground.png nu echt is overschreven!
+          AFTER_HASH=$(md5sum android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png | awk '{print $1}')
+          echo "Hash ic_launcher_foreground VOOR: $BEFORE_HASH"
+          echo "Hash ic_launcher_foreground NA:   $AFTER_HASH"
+
+          if [ "$BEFORE_HASH" = "$AFTER_HASH" ]; then
+            echo "❌ FOUT: ic_launcher_foreground.png is NIET overschreven door capacitor-assets!"
             exit 1
           fi
+          echo "✅ Adaptive Icon is daadwerkelijk vervangen door jouw KlusBazen-logo!"
 
           npx cap sync android
           sed -i "s/versionCode 1/versionCode ${{ github.run_number }}/g" android/app/build.gradle
