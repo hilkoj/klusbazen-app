@@ -35,9 +35,24 @@ jobs:
       - name: 5. Android-project, icoon & versienummer genereren
         run: |
           npx cap add android
-          if [ -f "assets/logo.png" ] || [ -f "assets/logo.jpg" ]; then
+
+          # Zorg dat het logo altijd de juiste bestandsnamen heeft voor @capacitor/assets
+          if [ -f "assets/logo.png" ] && [ ! -f "assets/icon-only.png" ]; then
+            cp assets/logo.png assets/icon-only.png
+            cp assets/logo.png assets/splash.png
+          elif [ -f "assets/logo.jpg" ] && [ ! -f "assets/icon-only.jpg" ]; then
+            cp assets/logo.jpg assets/icon-only.jpg
+            cp assets/logo.jpg assets/splash.jpg
+          elif [ -f "assets/icon-only.png" ] && [ ! -f "assets/splash.png" ]; then
+            cp assets/icon-only.png assets/splash.png
+          elif [ -f "assets/icon-only.jpg" ] && [ ! -f "assets/splash.jpg" ]; then
+            cp assets/icon-only.jpg assets/splash.jpg
+          fi
+
+          if [ -f "assets/icon-only.png" ] || [ -f "assets/icon-only.jpg" ]; then
             npx capacitor-assets generate --android --iconBackgroundColor '#153E75' --splashBackgroundColor '#153E75'
           fi
+
           npx cap sync android
           sed -i "s/versionCode 1/versionCode ${{ github.run_number }}/g" android/app/build.gradle
           sed -i "s/versionName \"1.0\"/versionName \"1.0.${{ github.run_number }}\"/g" android/app/build.gradle
