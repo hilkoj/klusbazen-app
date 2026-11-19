@@ -29,9 +29,12 @@ jobs:
           npm install
           npm run build
 
-      - name: 5. Android-project genereren & versienummer ophogen
+      - name: 5. Android-project, icoon & versienummer genereren
         run: |
           npx cap add android
+          if [ -f "assets/logo.png" ] || [ -f "assets/logo.jpg" ]; then
+            npx capacitor-assets generate --android --iconBackgroundColor '#153E75' --splashBackgroundColor '#153E75'
+          fi
           npx cap sync android
           sed -i "s/versionCode 1/versionCode ${{ github.run_number }}/g" android/app/build.gradle
           sed -i "s/versionName \"1.0\"/versionName \"1.0.${{ github.run_number }}\"/g" android/app/build.gradle
@@ -86,4 +89,3 @@ jobs:
         with:
           name: KlusBazen-v1.0.${{ github.run_number }}-APK
           path: KlusBazen-v1.0.${{ github.run_number }}.apk
-
