@@ -3,6 +3,7 @@
   "appName": "KlusBazen",
   "webDir": "dist",
   "android": {
-    "allowMixedContent": true
+    "allowMixedContent": true,
+    "adjustMarginsForEdgeToEdge": "force"
   }
 }

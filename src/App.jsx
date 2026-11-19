@@ -439,17 +439,23 @@ export default function App() {
   };
 
   // ============================================================================
-  // RENDERING
+  // RENDERING (Schermvullend & Responsive voor Portrait + Landscape)
   // ============================================================================
 
   return (
-    <div className="min-h-screen bg-slate-100 flex justify-center items-start sm:py-6 font-sans text-slate-800">
-      {/* Mobiele App Container (Android look & feel) */}
-      <div className="w-full max-w-md bg-slate-50 min-h-screen sm:min-h-[820px] sm:max-h-[880px] sm:rounded-[2.5rem] sm:shadow-2xl sm:border-[6px] sm:border-slate-800 flex flex-col relative overflow-hidden">
-        
-        {/* Bovenste Statusbalk / Header */}
-        <header className="bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-600 text-white px-5 pt-5 pb-6 rounded-b-3xl shadow-md z-10 shrink-0">
-          <div className="flex items-center justify-between mb-4">
+    <div className="h-[100dvh] w-full bg-slate-50 flex flex-col relative overflow-hidden font-sans text-slate-800">
+      {/* Bovenste Statusbalk / Header (compact in landscape) */}
+      <header
+        className="bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-600 text-white px-4 sm:px-6 pb-4 landscape:pb-3 rounded-b-3xl shadow-md z-10 shrink-0"
+        style={{
+          paddingTop: 'max(0.85rem, env(safe-area-inset-top))',
+          paddingLeft: 'max(1rem, env(safe-area-inset-left))',
+          paddingRight: 'max(1rem, env(safe-area-inset-right))',
+        }}
+      >
+        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-5">
+          {/* App Titel & Sync Badge */}
+          <div className="flex items-center justify-between sm:justify-start gap-3 shrink-0">
             <div className="flex items-center gap-2">
               <div className="bg-white/20 p-2 rounded-xl backdrop-blur-sm">
                 <Sparkles className="w-5 h-5 text-amber-300" />
@@ -474,10 +480,10 @@ export default function App() {
           </div>
 
           {/* Gezinsbeloning Voortgangskaart */}
-          <div className="bg-white/15 backdrop-blur-md border border-white/20 rounded-2xl p-3.5">
-            <div className="flex items-center justify-between gap-2 mb-2">
+          <div className="bg-white/15 backdrop-blur-md border border-white/20 rounded-2xl p-3 sm:flex-1 sm:max-w-md">
+            <div className="flex items-center justify-between gap-2 mb-1.5">
               <div className="flex items-center gap-2.5 min-w-0">
-                <span className="text-3xl bg-white/20 w-11 h-11 flex items-center justify-center rounded-xl shrink-0">
+                <span className="text-2xl sm:text-3xl bg-white/20 w-10 h-10 flex items-center justify-center rounded-xl shrink-0">
                   {data.reward.emoji || DEFAULT_REWARD_EMOJI}
                 </span>
                 <div className="min-w-0">
@@ -493,7 +499,7 @@ export default function App() {
                 </div>
               </div>
               <div className="text-right shrink-0">
-                <div className="text-lg font-black text-amber-300 leading-none">
+                <div className="text-base sm:text-lg font-black text-amber-300 leading-none">
                   {totalPoints} <span className="text-xs font-semibold text-white/80">/ {targetPoints}</span>
                 </div>
                 <span className="text-[11px] text-indigo-100">{progressPercent}% behaald</span>
@@ -501,7 +507,7 @@ export default function App() {
             </div>
 
             {/* Voortgangsbalk */}
-            <div className="w-full h-3.5 bg-black/25 rounded-full overflow-hidden p-0.5">
+            <div className="w-full h-3 bg-black/25 rounded-full overflow-hidden p-0.5">
               <div
                 className={`h-full rounded-full transition-all duration-700 ease-out flex items-center justify-end pr-1 ${
                   isGoalReached
@@ -517,17 +523,24 @@ export default function App() {
             {isGoalReached && (
               <button
                 onClick={() => setShowCelebration(true)}
-                className="mt-2.5 w-full bg-emerald-400 hover:bg-emerald-300 text-emerald-950 font-bold text-xs py-1.5 rounded-xl flex items-center justify-center gap-1.5 shadow-sm transition animate-pulse"
+                className="mt-2 w-full bg-emerald-400 hover:bg-emerald-300 text-emerald-950 font-bold text-xs py-1.5 rounded-xl flex items-center justify-center gap-1.5 shadow-sm transition animate-pulse"
               >
                 <Gift className="w-4 h-4" /> Doel behaald! Claim de beloning! 🎉
               </button>
             )}
           </div>
-        </header>
+        </div>
+      </header>
 
-        {/* Scrollbare Hoofdinhoud */}
-        <main className="flex-1 overflow-y-auto px-4 py-4 pb-24 space-y-5">
-
+      {/* Scrollbare Hoofdinhoud */}
+      <main
+        className="flex-1 overflow-y-auto py-4"
+        style={{
+          paddingLeft: 'max(1rem, env(safe-area-inset-left))',
+          paddingRight: 'max(1rem, env(safe-area-inset-right))',
+        }}
+      >
+        <div className="max-w-4xl mx-auto space-y-5 pb-4">
           {/* ============================================================== */}
           {/* TAB 1: KLUSJES                                                 */}
           {/* ============================================================== */}
@@ -573,7 +586,7 @@ export default function App() {
                 </div>
               </section>
 
-              {/* Klusjeslijst */}
+              {/* Klusjeslijst (2 kolommen in landscape / bredere schermen) */}
               <section className="space-y-2.5">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">
@@ -592,7 +605,7 @@ export default function App() {
                     Nog geen klusjes! Voeg je eerste klusje toe.
                   </div>
                 ) : (
-                  <div className="space-y-2.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {data.chores.map((chore) => {
                       const sizeCfg = SIZE_CONFIG[chore.size] || SIZE_CONFIG.klein;
                       return (
@@ -645,101 +658,103 @@ export default function App() {
           {/* TAB 2: RANGLIJST                                               */}
           {/* ============================================================== */}
           {activeTab === 'leaderboard' && (
-            <>
-              {/* Erepodium Top 3 */}
-              <section className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-extrabold text-sm text-slate-800 flex items-center gap-1.5">
-                    <Trophy className="w-4 h-4 text-amber-500" /> Gezinspodium
-                  </h3>
-                  <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full">
-                    Totaal: {totalPoints} pnt
-                  </span>
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+              <div className="space-y-4">
+                {/* Erepodium Top 3 */}
+                <section className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-extrabold text-sm text-slate-800 flex items-center gap-1.5">
+                      <Trophy className="w-4 h-4 text-amber-500" /> Gezinspodium
+                    </h3>
+                    <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full">
+                      Totaal: {totalPoints} pnt
+                    </span>
+                  </div>
 
-                <div className="flex items-end justify-center gap-3 pt-4 pb-2">
-                  {/* 2e plek */}
-                  {sortedMembers[1] && (
-                    <div className="flex flex-col items-center w-24">
-                      <span className="text-3xl mb-1">{sortedMembers[1].avatar}</span>
-                      <span className="text-xs font-bold text-slate-700 truncate w-full text-center">
-                        {sortedMembers[1].name}
-                      </span>
-                      <span className="text-[11px] font-extrabold text-slate-500 mb-1.5">
-                        {sortedMembers[1].points || 0} pnt
-                      </span>
-                      <div className="w-full h-16 bg-gradient-to-t from-slate-300 to-slate-200 rounded-t-2xl flex items-center justify-center font-black text-slate-600 text-lg shadow-inner">
-                        2
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 1e plek */}
-                  {sortedMembers[0] && (
-                    <div className="flex flex-col items-center w-28">
-                      <span className="text-xs font-black text-amber-500 mb-0.5 flex items-center gap-0.5">
-                        <Flame className="w-3.5 h-3.5 fill-amber-400" /> #1
-                      </span>
-                      <span className="text-4xl mb-1">{sortedMembers[0].avatar}</span>
-                      <span className="text-xs font-extrabold text-slate-900 truncate w-full text-center">
-                        {sortedMembers[0].name}
-                      </span>
-                      <span className="text-xs font-black text-amber-600 mb-1.5">
-                        {sortedMembers[0].points || 0} pnt
-                      </span>
-                      <div className="w-full h-24 bg-gradient-to-t from-amber-400 to-yellow-300 rounded-t-2xl flex items-center justify-center font-black text-amber-900 text-2xl shadow-md">
-                        1
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 3e plek */}
-                  {sortedMembers[2] && (
-                    <div className="flex flex-col items-center w-24">
-                      <span className="text-3xl mb-1">{sortedMembers[2].avatar}</span>
-                      <span className="text-xs font-bold text-slate-700 truncate w-full text-center">
-                        {sortedMembers[2].name}
-                      </span>
-                      <span className="text-[11px] font-extrabold text-slate-500 mb-1.5">
-                        {sortedMembers[2].points || 0} pnt
-                      </span>
-                      <div className="w-full h-12 bg-gradient-to-t from-orange-300 to-amber-200 rounded-t-2xl flex items-center justify-center font-black text-orange-800 text-lg shadow-inner">
-                        3
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </section>
-
-              {/* Volledige Bijdrage Lijst */}
-              <section className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
-                <h3 className="font-extrabold text-sm text-slate-800">Bijdrage per gezinslid</h3>
-                <div className="space-y-3">
-                  {sortedMembers.map((member, idx) => {
-                    const pct = totalPoints > 0 ? Math.round(((member.points || 0) / totalPoints) * 100) : 0;
-                    return (
-                      <div key={member.id} className="space-y-1">
-                        <div className="flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-2">
-                            <span className="font-black text-slate-400 w-4">{idx + 1}.</span>
-                            <span className="text-lg">{member.avatar}</span>
-                            <span className="font-bold text-slate-800">{member.name}</span>
-                          </div>
-                          <div className="font-bold text-slate-700">
-                            {member.points || 0} pnt <span className="text-slate-400 font-semibold">({pct}%)</span>
-                          </div>
-                        </div>
-                        <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-indigo-500 rounded-full transition-all duration-500"
-                            style={{ width: `${pct}%` }}
-                          />
+                  <div className="flex items-end justify-center gap-3 pt-4 pb-2">
+                    {/* 2e plek */}
+                    {sortedMembers[1] && (
+                      <div className="flex flex-col items-center w-24">
+                        <span className="text-3xl mb-1">{sortedMembers[1].avatar}</span>
+                        <span className="text-xs font-bold text-slate-700 truncate w-full text-center">
+                          {sortedMembers[1].name}
+                        </span>
+                        <span className="text-[11px] font-extrabold text-slate-500 mb-1.5">
+                          {sortedMembers[1].points || 0} pnt
+                        </span>
+                        <div className="w-full h-16 bg-gradient-to-t from-slate-300 to-slate-200 rounded-t-2xl flex items-center justify-center font-black text-slate-600 text-lg shadow-inner">
+                          2
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
-              </section>
+                    )}
+
+                    {/* 1e plek */}
+                    {sortedMembers[0] && (
+                      <div className="flex flex-col items-center w-28">
+                        <span className="text-xs font-black text-amber-500 mb-0.5 flex items-center gap-0.5">
+                          <Flame className="w-3.5 h-3.5 fill-amber-400" /> #1
+                        </span>
+                        <span className="text-4xl mb-1">{sortedMembers[0].avatar}</span>
+                        <span className="text-xs font-extrabold text-slate-900 truncate w-full text-center">
+                          {sortedMembers[0].name}
+                        </span>
+                        <span className="text-xs font-black text-amber-600 mb-1.5">
+                          {sortedMembers[0].points || 0} pnt
+                        </span>
+                        <div className="w-full h-24 bg-gradient-to-t from-amber-400 to-yellow-300 rounded-t-2xl flex items-center justify-center font-black text-amber-900 text-2xl shadow-md">
+                          1
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 3e plek */}
+                    {sortedMembers[2] && (
+                      <div className="flex flex-col items-center w-24">
+                        <span className="text-3xl mb-1">{sortedMembers[2].avatar}</span>
+                        <span className="text-xs font-bold text-slate-700 truncate w-full text-center">
+                          {sortedMembers[2].name}
+                        </span>
+                        <span className="text-[11px] font-extrabold text-slate-500 mb-1.5">
+                          {sortedMembers[2].points || 0} pnt
+                        </span>
+                        <div className="w-full h-12 bg-gradient-to-t from-orange-300 to-amber-200 rounded-t-2xl flex items-center justify-center font-black text-orange-800 text-lg shadow-inner">
+                          3
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </section>
+
+                {/* Volledige Bijdrage Lijst */}
+                <section className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
+                  <h3 className="font-extrabold text-sm text-slate-800">Bijdrage per gezinslid</h3>
+                  <div className="space-y-3">
+                    {sortedMembers.map((member, idx) => {
+                      const pct = totalPoints > 0 ? Math.round(((member.points || 0) / totalPoints) * 100) : 0;
+                      return (
+                        <div key={member.id} className="space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-2">
+                              <span className="font-black text-slate-400 w-4">{idx + 1}.</span>
+                              <span className="text-lg">{member.avatar}</span>
+                              <span className="font-bold text-slate-800">{member.name}</span>
+                            </div>
+                            <div className="font-bold text-slate-700">
+                              {member.points || 0} pnt <span className="text-slate-400 font-semibold">({pct}%)</span>
+                            </div>
+                          </div>
+                          <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-indigo-500 rounded-full transition-all duration-500"
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              </div>
 
               {/* Recente Activiteiten */}
               <section className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
@@ -767,14 +782,14 @@ export default function App() {
                   </div>
                 )}
               </section>
-            </>
+            </div>
           )}
 
           {/* ============================================================== */}
           {/* TAB 3: BELONING & TROFEEËNKAST                                 */}
           {/* ============================================================== */}
           {activeTab === 'reward' && (
-            <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
               {/* Beloning Instellen */}
               <section className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-4">
                 <div className="flex items-center gap-2">
@@ -868,78 +883,80 @@ export default function App() {
                 </form>
               </section>
 
-              {/* Nieuwe ronde starten */}
-              <section className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-extrabold text-sm text-slate-800">Nieuwe periode starten</h3>
-                    <p className="text-xs text-slate-500">Zet alle punten weer op 0 voor een nieuwe ronde.</p>
-                  </div>
-                  <RotateCcw className="w-5 h-5 text-slate-400 shrink-0" />
-                </div>
-
-                {!confirmReset ? (
-                  <button
-                    onClick={() => setConfirmReset(true)}
-                    className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs py-2.5 rounded-xl transition"
-                  >
-                    {isGoalReached ? 'Beloning claimen & nieuwe ronde starten 🎉' : 'Punten resetten & opnieuw beginnen'}
-                  </button>
-                ) : (
-                  <div className="bg-rose-50 border border-rose-200 rounded-2xl p-3 space-y-2">
-                    <p className="text-xs font-bold text-rose-800 text-center">
-                      Weet je zeker dat je een nieuwe ronde wilt starten?
-                    </p>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setConfirmReset(false)}
-                        className="flex-1 bg-white border border-slate-200 text-slate-600 font-bold text-xs py-2 rounded-xl"
-                      >
-                        Annuleren
-                      </button>
-                      <button
-                        onClick={handleClaimAndStartNewRound}
-                        className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs py-2 rounded-xl"
-                      >
-                        Ja, start nieuw!
-                      </button>
+              <div className="space-y-4">
+                {/* Nieuwe ronde starten */}
+                <section className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-extrabold text-sm text-slate-800">Nieuwe periode starten</h3>
+                      <p className="text-xs text-slate-500">Zet alle punten weer op 0 voor een nieuwe ronde.</p>
                     </div>
+                    <RotateCcw className="w-5 h-5 text-slate-400 shrink-0" />
                   </div>
-                )}
-              </section>
 
-              {/* Trofeeënkast */}
-              <section className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
-                <h3 className="font-extrabold text-sm text-slate-800 flex items-center gap-1.5">
-                  <Award className="w-4 h-4 text-amber-500" /> Behaalde beloningen
-                </h3>
-                {(!data.pastRewards || data.pastRewards.length === 0) ? (
-                  <p className="text-xs text-slate-400 text-center py-2">Nog geen behaalde beloningen.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {data.pastRewards.map((pr) => (
-                      <div key={pr.id} className="flex items-center justify-between bg-amber-50/70 border border-amber-100 rounded-2xl p-3">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <span className="text-2xl">{pr.emoji || DEFAULT_REWARD_EMOJI}</span>
-                          <div className="min-w-0">
-                            <p className="font-bold text-xs text-slate-800 truncate">{pr.title}</p>
-                            <p className="text-[10px] text-slate-500">{pr.date}</p>
-                          </div>
-                        </div>
-                        <span className="text-xs font-extrabold text-amber-700 shrink-0">{pr.totalPoints} pnt</span>
+                  {!confirmReset ? (
+                    <button
+                      onClick={() => setConfirmReset(true)}
+                      className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs py-2.5 rounded-xl transition"
+                    >
+                      {isGoalReached ? 'Beloning claimen & nieuwe ronde starten 🎉' : 'Punten resetten & opnieuw beginnen'}
+                    </button>
+                  ) : (
+                    <div className="bg-rose-50 border border-rose-200 rounded-2xl p-3 space-y-2">
+                      <p className="text-xs font-bold text-rose-800 text-center">
+                        Weet je zeker dat je een nieuwe ronde wilt starten?
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setConfirmReset(false)}
+                          className="flex-1 bg-white border border-slate-200 text-slate-600 font-bold text-xs py-2 rounded-xl"
+                        >
+                          Annuleren
+                        </button>
+                        <button
+                          onClick={handleClaimAndStartNewRound}
+                          className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs py-2 rounded-xl"
+                        >
+                          Ja, start nieuw!
+                        </button>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </section>
-            </>
+                    </div>
+                  )}
+                </section>
+
+                {/* Trofeeënkast */}
+                <section className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
+                  <h3 className="font-extrabold text-sm text-slate-800 flex items-center gap-1.5">
+                    <Award className="w-4 h-4 text-amber-500" /> Behaalde beloningen
+                  </h3>
+                  {(!data.pastRewards || data.pastRewards.length === 0) ? (
+                    <p className="text-xs text-slate-400 text-center py-2">Nog geen behaalde beloningen.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {data.pastRewards.map((pr) => (
+                        <div key={pr.id} className="flex items-center justify-between bg-amber-50/70 border border-amber-100 rounded-2xl p-3">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className="text-2xl">{pr.emoji || DEFAULT_REWARD_EMOJI}</span>
+                            <div className="min-w-0">
+                              <p className="font-bold text-xs text-slate-800 truncate">{pr.title}</p>
+                              <p className="text-[10px] text-slate-500">{pr.date}</p>
+                            </div>
+                          </div>
+                          <span className="text-xs font-extrabold text-amber-700 shrink-0">{pr.totalPoints} pnt</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              </div>
+            </div>
           )}
 
           {/* ============================================================== */}
           {/* TAB 4: FIREBASE & INSTELLINGEN                                 */}
           {/* ============================================================== */}
           {activeTab === 'settings' && (
-            <>
+            <div className="max-w-lg mx-auto">
               {/* Firebase Realtime Database Koppeling */}
               <section className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
                 <div className="flex items-center gap-2">
@@ -987,12 +1004,21 @@ export default function App() {
                   </div>
                 </form>
               </section>
-            </>
+            </div>
           )}
-        </main>
+        </div>
+      </main>
 
-        {/* Onderste Android Navigatiebalk */}
-        <nav className="bg-white border-t border-slate-200 px-2 py-2 flex justify-around items-center absolute bottom-0 left-0 right-0 z-20">
+      {/* Onderste Android Navigatiebalk (met Safe Area zodat Android knoppen niet overlappen) */}
+      <nav
+        className="bg-white border-t border-slate-200 pt-1.5 px-2 shrink-0 z-20"
+        style={{
+          paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))',
+          paddingLeft: 'max(0.5rem, env(safe-area-inset-left))',
+          paddingRight: 'max(0.5rem, env(safe-area-inset-right))',
+        }}
+      >
+        <div className="max-w-lg mx-auto flex justify-around items-center">
           {[
             { id: 'chores', label: 'Klusjes', icon: CheckSquare },
             { id: 'leaderboard', label: 'Ranglijst', icon: Trophy },
@@ -1005,7 +1031,7 @@ export default function App() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex flex-col items-center gap-1 px-3 py-1.5 rounded-2xl transition ${
+                className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-2xl transition ${
                   isActive ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 hover:text-slate-600'
                 }`}
               >
@@ -1014,187 +1040,187 @@ export default function App() {
               </button>
             );
           })}
-        </nav>
+        </div>
+      </nav>
 
-        {/* ============================================================== */}
-        {/* TOAST MELDING                                                  */}
-        {/* ============================================================== */}
-        {toast && (
-          <div className="absolute top-24 left-1/2 -translate-x-1/2 bg-slate-900/95 text-white px-4 py-2.5 rounded-full shadow-xl flex items-center gap-2 text-xs font-bold z-50 animate-bounce whitespace-nowrap">
-            <span className="text-base">{toast.emoji}</span>
-            <span>{toast.message}</span>
-          </div>
-        )}
+      {/* ============================================================== */}
+      {/* TOAST MELDING                                                  */}
+      {/* ============================================================== */}
+      {toast && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 bg-slate-900/95 text-white px-4 py-2.5 rounded-full shadow-xl flex items-center gap-2 text-xs font-bold z-50 animate-bounce whitespace-nowrap">
+          <span className="text-base">{toast.emoji}</span>
+          <span>{toast.message}</span>
+        </div>
+      )}
 
-        {/* ============================================================== */}
-        {/* MODAL: NIEUW KLUSJE TOEVOEGEN                                  */}
-        {/* ============================================================== */}
-        {showAddChore && (
-          <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm z-40 flex items-end sm:items-center justify-center p-4">
-            <div className="bg-white w-full rounded-3xl p-5 shadow-2xl space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-extrabold text-base text-slate-800">Nieuw klusje maken</h3>
-                <button onClick={() => setShowAddChore(false)} className="p-1 text-slate-400 hover:text-slate-600">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <form onSubmit={handleAddChore} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 mb-1">Naam van het klusje</label>
-                  <input
-                    type="text"
-                    required
-                    value={newChoreTitle}
-                    onChange={(e) => setNewChoreTitle(e.target.value)}
-                    placeholder="Bijv. Hond uitlaten of Kamer opruimen"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 mb-1.5">Kies een icoontje</label>
-                  <div className="flex flex-wrap gap-2">
-                    {CHORE_EMOJIS.map((em) => (
-                      <button
-                        key={em}
-                        type="button"
-                        onClick={() => setNewChoreEmoji(em)}
-                        className={`w-9 h-9 rounded-xl text-lg flex items-center justify-center border-2 transition ${
-                          newChoreEmoji === em ? 'border-indigo-500 bg-indigo-50 scale-110' : 'border-slate-100 bg-slate-50'
-                        }`}
-                      >
-                        {em}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 mb-1.5">Hoe groot is het klusje?</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {Object.entries(SIZE_CONFIG).map(([key, cfg]) => (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => setNewChoreSize(key)}
-                        className={`p-2.5 rounded-xl border-2 text-center transition ${
-                          newChoreSize === key
-                            ? 'border-indigo-600 bg-indigo-50'
-                            : 'border-slate-100 bg-slate-50'
-                        }`}
-                      >
-                        <div className="text-xs font-bold text-slate-800">{cfg.label}</div>
-                        <div className="text-xs font-extrabold text-amber-600">+{cfg.points} pnt</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm py-3 rounded-xl shadow-md"
-                >
-                  Klusje toevoegen
-                </button>
-              </form>
+      {/* ============================================================== */}
+      {/* MODAL: NIEUW KLUSJE TOEVOEGEN                                  */}
+      {/* ============================================================== */}
+      {showAddChore && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md max-h-[90dvh] overflow-y-auto rounded-3xl p-5 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-extrabold text-base text-slate-800">Nieuw klusje maken</h3>
+              <button onClick={() => setShowAddChore(false)} className="p-1 text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
             </div>
-          </div>
-        )}
 
-        {/* ============================================================== */}
-        {/* MODAL: NIEUW GEZINSLID TOEVOEGEN                               */}
-        {/* ============================================================== */}
-        {showAddMember && (
-          <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm z-40 flex items-end sm:items-center justify-center p-4">
-            <div className="bg-white w-full rounded-3xl p-5 shadow-2xl space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-extrabold text-base text-slate-800">Gezinslid toevoegen</h3>
-                <button onClick={() => setShowAddMember(false)} className="p-1 text-slate-400 hover:text-slate-600">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <form onSubmit={handleAddMember} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 mb-1">Naam</label>
-                  <input
-                    type="text"
-                    required
-                    value={newMemberName}
-                    onChange={(e) => setNewMemberName(e.target.value)}
-                    placeholder="Bijv. Sophie of Max"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 mb-1.5">Kies een leuke avatar</label>
-                  <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-1">
-                    {AVATAR_OPTIONS.map((av) => (
-                      <button
-                        key={av}
-                        type="button"
-                        onClick={() => setNewMemberAvatar(av)}
-                        className={`w-10 h-10 rounded-xl text-xl flex items-center justify-center border-2 transition ${
-                          newMemberAvatar === av ? 'border-indigo-500 bg-indigo-50 scale-110' : 'border-slate-100 bg-slate-50'
-                        }`}
-                      >
-                        {av}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm py-3 rounded-xl shadow-md"
-                >
-                  Toevoegen aan gezin
-                </button>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* ============================================================== */}
-        {/* MODAL: FEEST! GEZINSDOEL BEHAALD                               */}
-        {/* ============================================================== */}
-        {showCelebration && (
-          <div className="absolute inset-0 bg-indigo-950/80 backdrop-blur-md z-50 flex items-center justify-center p-5">
-            <div className="bg-white w-full rounded-3xl p-6 text-center shadow-2xl space-y-4">
-              <div className="text-6xl animate-bounce">{data.reward.emoji || DEFAULT_REWARD_EMOJI}</div>
+            <form onSubmit={handleAddChore} className="space-y-4">
               <div>
-                <span className="inline-block bg-emerald-100 text-emerald-700 text-xs font-extrabold px-3 py-1 rounded-full mb-2">
-                  🎉 DOEL BEHAALD! 🎉
-                </span>
-                <h2 className="text-xl font-black text-slate-900">Geweldig gedaan samen!</h2>
-                <p className="text-sm text-slate-600 mt-1">
-                  Jullie hebben <strong>{totalPoints} punten</strong> verzameld en daarmee de beloning verdiend:
-                </p>
-                <div className="mt-3 bg-amber-50 border border-amber-200 rounded-2xl p-3 font-extrabold text-amber-900 text-base">
-                  {data.reward.title}
+                <label className="block text-xs font-bold text-slate-600 mb-1">Naam van het klusje</label>
+                <input
+                  type="text"
+                  required
+                  value={newChoreTitle}
+                  onChange={(e) => setNewChoreTitle(e.target.value)}
+                  placeholder="Bijv. Hond uitlaten of Kamer opruimen"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1.5">Kies een icoontje</label>
+                <div className="flex flex-wrap gap-2">
+                  {CHORE_EMOJIS.map((em) => (
+                    <button
+                      key={em}
+                      type="button"
+                      onClick={() => setNewChoreEmoji(em)}
+                      className={`w-9 h-9 rounded-xl text-lg flex items-center justify-center border-2 transition ${
+                        newChoreEmoji === em ? 'border-indigo-500 bg-indigo-50 scale-110' : 'border-slate-100 bg-slate-50'
+                      }`}
+                    >
+                      {em}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              <div className="pt-2 space-y-2">
-                <button
-                  onClick={handleClaimAndStartNewRound}
-                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm py-3 rounded-xl shadow-md transition"
-                >
-                  Beloning bijschrijven & Nieuwe ronde starten 🚀
-                </button>
-                <button
-                  onClick={() => setShowCelebration(false)}
-                  className="w-full text-slate-500 hover:text-slate-700 font-bold text-xs py-2"
-                >
-                  Sluiten (nog even door sparen)
-                </button>
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1.5">Hoe groot is het klusje?</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {Object.entries(SIZE_CONFIG).map(([key, cfg]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setNewChoreSize(key)}
+                      className={`p-2.5 rounded-xl border-2 text-center transition ${
+                        newChoreSize === key
+                          ? 'border-indigo-600 bg-indigo-50'
+                          : 'border-slate-100 bg-slate-50'
+                      }`}
+                    >
+                      <div className="text-xs font-bold text-slate-800">{cfg.label}</div>
+                      <div className="text-xs font-extrabold text-amber-600">+{cfg.points} pnt</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm py-3 rounded-xl shadow-md"
+              >
+                Klusje toevoegen
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL: NIEUW GEZINSLID TOEVOEGEN                               */}
+      {/* ============================================================== */}
+      {showAddMember && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md max-h-[90dvh] overflow-y-auto rounded-3xl p-5 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-extrabold text-base text-slate-800">Gezinslid toevoegen</h3>
+              <button onClick={() => setShowAddMember(false)} className="p-1 text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddMember} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1">Naam</label>
+                <input
+                  type="text"
+                  required
+                  value={newMemberName}
+                  onChange={(e) => setNewMemberName(e.target.value)}
+                  placeholder="Bijv. Sophie of Max"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1.5">Kies een leuke avatar</label>
+                <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-1">
+                  {AVATAR_OPTIONS.map((av) => (
+                    <button
+                      key={av}
+                      type="button"
+                      onClick={() => setNewMemberAvatar(av)}
+                      className={`w-10 h-10 rounded-xl text-xl flex items-center justify-center border-2 transition ${
+                        newMemberAvatar === av ? 'border-indigo-500 bg-indigo-50 scale-110' : 'border-slate-100 bg-slate-50'
+                      }`}
+                    >
+                      {av}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm py-3 rounded-xl shadow-md"
+              >
+                Toevoegen aan gezin
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL: FEEST! GEZINSDOEL BEHAALD                               */}
+      {/* ============================================================== */}
+      {showCelebration && (
+        <div className="fixed inset-0 bg-indigo-950/80 backdrop-blur-md z-50 flex items-center justify-center p-5">
+          <div className="bg-white w-full max-w-md max-h-[90dvh] overflow-y-auto rounded-3xl p-6 text-center shadow-2xl space-y-4">
+            <div className="text-6xl animate-bounce">{data.reward.emoji || DEFAULT_REWARD_EMOJI}</div>
+            <div>
+              <span className="inline-block bg-emerald-100 text-emerald-700 text-xs font-extrabold px-3 py-1 rounded-full mb-2">
+                🎉 DOEL BEHAALD! 🎉
+              </span>
+              <h2 className="text-xl font-black text-slate-900">Geweldig gedaan samen!</h2>
+              <p className="text-sm text-slate-600 mt-1">
+                Jullie hebben <strong>{totalPoints} punten</strong> verzameld en daarmee de beloning verdiend:
+              </p>
+              <div className="mt-3 bg-amber-50 border border-amber-200 rounded-2xl p-3 font-extrabold text-amber-900 text-base">
+                {data.reward.title}
               </div>
             </div>
+
+            <div className="pt-2 space-y-2">
+              <button
+                onClick={handleClaimAndStartNewRound}
+                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm py-3 rounded-xl shadow-md transition"
+              >
+                Beloning bijschrijven & Nieuwe ronde starten 🚀
+              </button>
+              <button
+                onClick={() => setShowCelebration(false)}
+                className="w-full text-slate-500 hover:text-slate-700 font-bold text-xs py-2"
+              >
+                Sluiten (nog even door sparen)
+              </button>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
