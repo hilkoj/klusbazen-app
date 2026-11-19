@@ -1,0 +1,8 @@
+{
+  "appId": "nl.gezin.klusbazen",
+  "appName": "KlusBazen",
+  "webDir": "dist",
+  "android": {
+    "allowMixedContent": true
+  }
+}

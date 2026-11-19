@@ -1,0 +1,74 @@
+name: Bouw Gesigneerde KlusBazen APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 1. Code ophalen
+        uses: actions/checkout@v4
+
+      - name: 2. Node.js instellen
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: 3. Java 21 instellen (voor Android Gradle)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: 4. Pakketten installeren & webapp bouwen
+        run: |
+          npm install
+          npm run build
+
+      - name: 5. Android-project genereren & versienummer ophogen
+        run: |
+          npx cap add android
+          npx cap sync android
+          sed -i "s/versionCode 1/versionCode ${{ github.run_number }}/g" android/app/build.gradle
+          sed -i "s/versionName \"1.0\"/versionName \"1.0.${{ github.run_number }}\"/g" android/app/build.gradle
+
+      - name: 6. Release APK compileren
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleRelease
+
+      - name: 7. APK uitlijnen (zipalign) & signeren (apksigner)
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 --decode > release.jks
+          BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1)
+
+          "$BUILD_TOOLS/zipalign" -v -p 4 \
+            android/app/build/outputs/apk/release/app-release-unsigned.apk \
+            app-aligned.apk
+
+          "$BUILD_TOOLS/apksigner" sign \
+            --ks release.jks \
+            --ks-key-alias "$KEY_ALIAS" \
+            --ks-pass "pass:$KEYSTORE_PASSWORD" \
+            --key-pass "pass:$KEY_PASSWORD" \
+            --out "KlusBazen-v1.0.${{ github.run_number }}.apk" \
+            app-aligned.apk
+
+          "$BUILD_TOOLS/apksigner" verify "KlusBazen-v1.0.${{ github.run_number }}.apk"
+          rm -f release.jks app-aligned.apk
+
+      - name: 8. Gesigneerde APK beschikbaar maken als download
+        uses: actions/upload-artifact@v4
+        with:
+          name: KlusBazen-v1.0.${{ github.run_number }}-APK
+          path: KlusBazen-v1.0.${{ github.run_number }}.apk
