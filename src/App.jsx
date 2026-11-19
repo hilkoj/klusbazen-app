@@ -18,7 +18,8 @@ import {
   Award,
   X,
   RotateCcw,
-  Users
+  Users,
+  Pencil
 } from 'lucide-react';
 
 // ============================================================================
@@ -113,6 +114,8 @@ export default function App() {
   // Modals state
   const [showAddChore, setShowAddChore] = useState(false);
   const [showAddMember, setShowAddMember] = useState(false);
+  const [editingMember, setEditingMember] = useState(null);
+  const [confirmDeleteMember, setConfirmDeleteMember] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
 
   // Formulier state: Nieuw klusje
@@ -123,6 +126,10 @@ export default function App() {
   // Formulier state: Nieuw gezinslid
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberAvatar, setNewMemberAvatar] = useState('🐼');
+
+  // Formulier state: Gezinslid bewerken
+  const [editMemberName, setEditMemberName] = useState('');
+  const [editMemberAvatar, setEditMemberAvatar] = useState('🐼');
 
   // Formulier state: Beloning aanpassen
   const [editRewardTitle, setEditRewardTitle] = useState(data.reward.title);
@@ -143,7 +150,9 @@ export default function App() {
 
   // Zorg dat activeMemberId altijd geldig blijft
   useEffect(() => {
-    if (!data.members.find((m) => m.id === activeMemberId) && data.members.length > 0) {
+    if (data.members.length === 0) {
+      if (activeMemberId !== null) setActiveMemberId(null);
+    } else if (!data.members.find((m) => m.id === activeMemberId)) {
       setActiveMemberId(data.members[0].id);
     }
   }, [data.members, activeMemberId]);
@@ -203,12 +212,20 @@ export default function App() {
       const res = await fetch(endpoint);
       if (!res.ok) throw new Error('Firebase leesfout');
       const remoteData = await res.json();
-      if (remoteData && remoteData.members && remoteData.chores) {
-        setData(remoteData);
-        setEditRewardTitle(remoteData.reward?.title || '');
-        setEditRewardEmoji(remoteData.reward?.emoji || DEFAULT_REWARD_EMOJI);
-        setEditRewardTarget(remoteData.reward?.targetPoints || 200);
-        setEditRewardDate(remoteData.reward?.endDate || '');
+      if (remoteData && typeof remoteData === 'object') {
+        // Firebase laat lege arrays weg uit JSON; normaliseer ze zodat verwijderde items echt wegblijven
+        const normalized = {
+          members: Array.isArray(remoteData.members) ? remoteData.members : [],
+          chores: Array.isArray(remoteData.chores) ? remoteData.chores : [],
+          reward: remoteData.reward || getInitialState().reward,
+          history: Array.isArray(remoteData.history) ? remoteData.history : [],
+          pastRewards: Array.isArray(remoteData.pastRewards) ? remoteData.pastRewards : [],
+        };
+        setData(normalized);
+        setEditRewardTitle(normalized.reward?.title || '');
+        setEditRewardEmoji(normalized.reward?.emoji || DEFAULT_REWARD_EMOJI);
+        setEditRewardTarget(normalized.reward?.targetPoints || 200);
+        setEditRewardDate(normalized.reward?.endDate || '');
         if (!silent) showToast('Gegevens bijgewerkt uit Firebase!', '☁️');
       } else if (remoteData === null) {
         // Database is nog leeg, upload huidige lokale data
@@ -275,7 +292,11 @@ export default function App() {
   // ============================================================================
 
   const handleCompleteChore = (chore) => {
-    if (!activeMember) return;
+    if (!activeMember) {
+      showToast('Voeg eerst een gezinslid toe!', '👨‍👩‍👧‍👦');
+      setShowAddMember(true);
+      return;
+    }
 
     const wasGoalReached = totalPoints >= targetPoints;
     const newTotal = totalPoints + chore.points;
@@ -358,6 +379,60 @@ export default function App() {
     setNewMemberName('');
     setShowAddMember(false);
     showToast(`${newMember.name} doet nu mee!`, newMember.avatar);
+  };
+
+  const openEditMember = (member, e) => {
+    if (e) e.stopPropagation();
+    setEditingMember(member);
+    setEditMemberName(member.name);
+    setEditMemberAvatar(member.avatar);
+    setConfirmDeleteMember(false);
+  };
+
+  const handleUpdateMember = (e) => {
+    e.preventDefault();
+    if (!editingMember || !editMemberName.trim()) return;
+
+    const updatedName = editMemberName.trim();
+    const updatedAvatar = editMemberAvatar;
+
+    updateData((prev) => ({
+      ...prev,
+      members: prev.members.map((m) =>
+        m.id === editingMember.id
+          ? { ...m, name: updatedName, avatar: updatedAvatar }
+          : m
+      ),
+      history: (prev.history || []).map((h) =>
+        h.memberId === editingMember.id
+          ? { ...h, memberName: updatedName, memberAvatar: updatedAvatar }
+          : h
+      ),
+    }));
+
+    setEditingMember(null);
+    setConfirmDeleteMember(false);
+    showToast(`${updatedName} bijgewerkt!`, updatedAvatar);
+  };
+
+  const handleDeleteMember = (id) => {
+    const removed = data.members.find((m) => m.id === id);
+    updateData((prev) => ({
+      ...prev,
+      members: prev.members.filter((m) => m.id !== id),
+    }));
+
+    setEditingMember(null);
+    setConfirmDeleteMember(false);
+    showToast(`${removed?.name || 'Gezinslid'} verwijderd`, '🗑️');
+  };
+
+  const handleDeletePastReward = (id) => {
+    updateData((prev) => ({
+      ...prev,
+      pastRewards: (prev.pastRewards || []).filter((pr) => pr.id !== id),
+    }));
+    showToast('Behaalde beloning verwijderd', '🗑️');
   };
 
   const handleSaveReward = (e) => {
@@ -561,28 +636,50 @@ export default function App() {
                 </div>
 
                 <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-1 px-1">
-                  {data.members.map((member) => {
-                    const isSelected = member.id === activeMember?.id;
-                    return (
-                      <button
-                        key={member.id}
-                        onClick={() => setActiveMemberId(member.id)}
-                        className={`flex flex-col items-center p-2.5 rounded-2xl min-w-[78px] border-2 transition shrink-0 ${
-                          isSelected
-                            ? 'bg-indigo-50 border-indigo-500 shadow-sm scale-[1.02]'
-                            : 'bg-white border-slate-100 hover:border-slate-200'
-                        }`}
-                      >
-                        <span className="text-2xl mb-1">{member.avatar}</span>
-                        <span className={`text-xs font-bold truncate max-w-[68px] ${isSelected ? 'text-indigo-700' : 'text-slate-700'}`}>
-                          {member.name}
-                        </span>
-                        <span className="text-[10px] font-extrabold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full mt-0.5">
-                          {member.points || 0} pnt
-                        </span>
-                      </button>
-                    );
-                  })}
+                  {data.members.length === 0 ? (
+                    <button
+                      onClick={() => setShowAddMember(true)}
+                      className="w-full bg-white border-2 border-dashed border-indigo-200 hover:border-indigo-400 rounded-2xl p-4 text-xs font-bold text-indigo-600 flex items-center justify-center gap-1.5 transition"
+                    >
+                      <Plus className="w-4 h-4" /> Voeg je eerste gezinslid toe
+                    </button>
+                  ) : (
+                    data.members.map((member) => {
+                      const isSelected = member.id === activeMember?.id;
+                      return (
+                        <div
+                          key={member.id}
+                          onClick={() => setActiveMemberId(member.id)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') setActiveMemberId(member.id);
+                          }}
+                          className={`relative flex flex-col items-center p-2.5 pt-3 rounded-2xl min-w-[84px] border-2 transition shrink-0 cursor-pointer ${
+                            isSelected
+                              ? 'bg-indigo-50 border-indigo-500 shadow-sm scale-[1.02]'
+                              : 'bg-white border-slate-100 hover:border-slate-200'
+                          }`}
+                        >
+                          <button
+                            type="button"
+                            onClick={(e) => openEditMember(member, e)}
+                            className="absolute top-1.5 right-1.5 p-1 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-white/80 transition"
+                            title={`${member.name} bewerken of verwijderen`}
+                          >
+                            <Pencil className="w-3 h-3" />
+                          </button>
+                          <span className="text-2xl mb-1">{member.avatar}</span>
+                          <span className={`text-xs font-bold truncate max-w-[70px] ${isSelected ? 'text-indigo-700' : 'text-slate-700'}`}>
+                            {member.name}
+                          </span>
+                          <span className="text-[10px] font-extrabold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full mt-0.5">
+                            {member.points || 0} pnt
+                          </span>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </section>
 
@@ -934,7 +1031,7 @@ export default function App() {
                   ) : (
                     <div className="space-y-2">
                       {data.pastRewards.map((pr) => (
-                        <div key={pr.id} className="flex items-center justify-between bg-amber-50/70 border border-amber-100 rounded-2xl p-3">
+                        <div key={pr.id} className="flex items-center justify-between gap-2 bg-amber-50/70 border border-amber-100 rounded-2xl p-3">
                           <div className="flex items-center gap-2.5 min-w-0">
                             <span className="text-2xl">{pr.emoji || DEFAULT_REWARD_EMOJI}</span>
                             <div className="min-w-0">
@@ -942,7 +1039,17 @@ export default function App() {
                               <p className="text-[10px] text-slate-500">{pr.date}</p>
                             </div>
                           </div>
-                          <span className="text-xs font-extrabold text-amber-700 shrink-0">{pr.totalPoints} pnt</span>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className="text-xs font-extrabold text-amber-700">{pr.totalPoints} pnt</span>
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePastReward(pr.id)}
+                              className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-white/80 rounded-lg transition"
+                              title="Behaalde beloning verwijderen"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -1180,6 +1287,100 @@ export default function App() {
                 Toevoegen aan gezin
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL: GEZINSLID BEWERKEN / VERWIJDEREN                        */}
+      {/* ============================================================== */}
+      {editingMember && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md max-h-[90dvh] overflow-y-auto rounded-3xl p-5 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-extrabold text-base text-slate-800">Gezinslid bewerken</h3>
+              <button
+                onClick={() => {
+                  setEditingMember(null);
+                  setConfirmDeleteMember(false);
+                }}
+                className="p-1 text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateMember} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1">Naam</label>
+                <input
+                  type="text"
+                  required
+                  value={editMemberName}
+                  onChange={(e) => setEditMemberName(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1.5">Avatar</label>
+                <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-1">
+                  {AVATAR_OPTIONS.map((av) => (
+                    <button
+                      key={av}
+                      type="button"
+                      onClick={() => setEditMemberAvatar(av)}
+                      className={`w-10 h-10 rounded-xl text-xl flex items-center justify-center border-2 transition ${
+                        editMemberAvatar === av ? 'border-indigo-500 bg-indigo-50 scale-110' : 'border-slate-100 bg-slate-50'
+                      }`}
+                    >
+                      {av}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm py-3 rounded-xl shadow-md"
+              >
+                Wijzigingen opslaan
+              </button>
+            </form>
+
+            <div className="pt-2 border-t border-slate-100">
+              {!confirmDeleteMember ? (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDeleteMember(true)}
+                  className="w-full bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-xs py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition"
+                >
+                  <Trash2 className="w-4 h-4" /> {editingMember.name} verwijderen
+                </button>
+              ) : (
+                <div className="bg-rose-50 border border-rose-200 rounded-2xl p-3 space-y-2">
+                  <p className="text-xs font-bold text-rose-800 text-center">
+                    Weet je zeker dat je {editingMember.name} wilt verwijderen?
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDeleteMember(false)}
+                      className="flex-1 bg-white border border-slate-200 text-slate-600 font-bold text-xs py-2 rounded-xl"
+                    >
+                      Annuleren
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteMember(editingMember.id)}
+                      className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs py-2 rounded-xl"
+                    >
+                      Ja, verwijderen
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
