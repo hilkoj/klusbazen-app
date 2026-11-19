@@ -59,8 +59,8 @@ jobs:
           "$BUILD_TOOLS/apksigner" sign \
             --ks release.jks \
             --ks-key-alias "$KEY_ALIAS" \
-            --ks-pass "pass:$KEYSTORE_PASSWORD" \
-            --key-pass "pass:$KEY_PASSWORD" \
+            --ks-pass env:KEYSTORE_PASSWORD \
+            --key-pass env:KEY_PASSWORD \
             --out "KlusBazen-v1.0.${{ github.run_number }}.apk" \
             app-aligned.apk
 
