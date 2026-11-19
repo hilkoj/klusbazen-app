@@ -5,6 +5,9 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-android:
     runs-on: ubuntu-latest
@@ -84,8 +87,17 @@ jobs:
           "$BUILD_TOOLS/apksigner" verify "KlusBazen-v1.0.${{ github.run_number }}.apk"
           rm -f release.jks app-aligned.apk
 
-      - name: 8. Gesigneerde APK beschikbaar maken als download
+      - name: 8. Gesigneerde APK beschikbaar maken als artifact
         uses: actions/upload-artifact@v4
         with:
           name: KlusBazen-v1.0.${{ github.run_number }}-APK
           path: KlusBazen-v1.0.${{ github.run_number }}.apk
+
+      - name: 9. Publiceren onder GitHub Releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v1.0.${{ github.run_number }}" \
+            "KlusBazen-v1.0.${{ github.run_number }}.apk" \
+            --title "KlusBazen v1.0.${{ github.run_number }}" \
+            --notes "Automatisch gebouwde en gesigneerde Android-release van KlusBazen."
