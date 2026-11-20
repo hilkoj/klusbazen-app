@@ -4,13 +4,14 @@
   "webDir": "dist",
   "android": {
     "allowMixedContent": true,
-    "adjustMarginsForEdgeToEdge": "force"
+    "adjustMarginsForEdgeToEdge": "force",
+    "backgroundColor": "#153E75"
   },
   "plugins": {
     "SplashScreen": {
-      "launchShowDuration": 1800,
+      "launchShowDuration": 300,
       "launchAutoHide": true,
-      "launchFadeOutDuration": 400,
+      "launchFadeOutDuration": 250,
       "backgroundColor": "#153E75",
       "androidSplashResourceName": "splash",
       "androidScaleType": "CENTER_CROP",

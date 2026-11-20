@@ -27,14 +27,9 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: 4. Pakketten installeren & webapp bouwen
+      - name: 4. Pakketten installeren, logo klaarzetten & webapp bouwen
         run: |
           npm install
-          npm run build
-
-      - name: 5. Android-project, icoon, splash screen & versienummer genereren
-        run: |
-          npx cap add android
 
           echo "=== Check assets/ map ==="
           if [ ! -d "assets" ]; then
@@ -43,7 +38,6 @@ jobs:
           fi
           ls -la assets/
 
-          # Zoek automatisch het logo-bestand (ongeacht .png/.jpg/.jpeg/.webp of hoofdletters)
           SOURCE_LOGO=$(find assets -maxdepth 1 -type f \( -iname "icon-only.*" -o -iname "logo.*" -o -iname "icon.*" \) | head -n 1)
           if [ -z "$SOURCE_LOGO" ]; then
             echo "❌ Geen logo gevonden in assets/! Upload bijv. assets/icon-only.png of assets/logo.jpg"
@@ -51,7 +45,27 @@ jobs:
           fi
           echo "✅ Bronlogo gevonden: $SOURCE_LOGO"
 
-          # Maak alle bestanden die @capacitor/assets nodig heeft voor Adaptive Icons + Splash Screen
+          # Kopieer logo naar public/logo.png zodat het schermvullende splash screen in index.html het direct kan tonen
+          mkdir -p public
+          SOURCE_LOGO="$SOURCE_LOGO" node << 'EOF'
+            const sharp = require('sharp');
+            sharp(process.env.SOURCE_LOGO)
+              .resize(512, 512, { fit: 'cover' })
+              .png()
+              .toFile('public/logo.png')
+              .then(() => console.log('✅ public/logo.png aangemaakt voor het splash screen'))
+              .catch((err) => { console.error(err); process.exit(1); });
+          EOF
+
+          npm run build
+
+      - name: 5. Android-project, icoon, Android 12+ splash thema & versienummer genereren
+        run: |
+          npx cap add android
+
+          SOURCE_LOGO=$(find assets -maxdepth 1 -type f \( -iname "icon-only.*" -o -iname "logo.*" -o -iname "icon.*" \) | head -n 1)
+
+          # Maak alle bestanden die @capacitor/assets nodig heeft voor Adaptive Icons + oudere Android splash screens
           SOURCE_LOGO="$SOURCE_LOGO" node << 'EOF'
             const sharp = require('sharp');
             const src = process.env.SOURCE_LOGO;
@@ -83,67 +97,15 @@ jobs:
                 .png()
                 .toFile('assets/icon-background.png');
 
-              // 4. Stijlvol Splash Screen (2732x2732) op basis van het KlusBazen-logo
-              const splashBgSvg = Buffer.from(`
-                <svg width="2732" height="2732" xmlns="http://www.w3.org/2000/svg">
-                  <defs>
-                    <radialGradient id="bgGrad" cx="50%" cy="46%" r="62%">
-                      <stop offset="0%" stop-color="#2257A0" />
-                      <stop offset="55%" stop-color="#153E75" />
-                      <stop offset="100%" stop-color="#0B2245" />
-                    </radialGradient>
-                    <radialGradient id="glow" cx="50%" cy="46%" r="32%">
-                      <stop offset="0%" stop-color="#FBBF24" stop-opacity="0.22" />
-                      <stop offset="100%" stop-color="#FBBF24" stop-opacity="0" />
-                    </radialGradient>
-                  </defs>
-                  <rect width="2732" height="2732" fill="url(#bgGrad)" />
-                  <circle cx="1366" cy="1260" r="780" fill="url(#glow)" />
-
-                  <!-- Subtiele decoratieve sterretjes rondom het logo -->
-                  <path d="M920 820 L932 855 L967 867 L932 879 L920 914 L908 879 L873 867 L908 855 Z" fill="#FBBF24" opacity="0.85" />
-                  <path d="M1840 900 L1849 926 L1875 935 L1849 944 L1840 970 L1831 944 L1805 935 L1831 926 Z" fill="#FBBF24" opacity="0.75" />
-                  <path d="M1790 1630 L1798 1652 L1820 1660 L1798 1668 L1790 1690 L1782 1668 L1760 1660 L1782 1652 Z" fill="#FFFFFF" opacity="0.55" />
-                  <circle cx="960" cy="1640" r="10" fill="#FBBF24" opacity="0.6" />
-                  <circle cx="1760" cy="830" r="8" fill="#FFFFFF" opacity="0.45" />
-                  <circle cx="860" cy="1260" r="7" fill="#FFFFFF" opacity="0.35" />
-
-                  <!-- Ondertitel onder het logo -->
-                  <text
-                    x="1366"
-                    y="1855"
-                    text-anchor="middle"
-                    font-family="DejaVu Sans, Arial, sans-serif"
-                    font-size="56"
-                    font-weight="700"
-                    letter-spacing="2"
-                    fill="#FDE68A"
-                  >Samen klussen, samen vieren!</text>
-                </svg>
-              `);
-
-              // Afgerond masker voor het gecentreerde logo op het splash screen
-              const logoSize = 860;
-              const roundedMask = Buffer.from(`
-                <svg width="${logoSize}" height="${logoSize}" xmlns="http://www.w3.org/2000/svg">
-                  <rect width="${logoSize}" height="${logoSize}" rx="190" ry="190" fill="#ffffff" />
-                </svg>
-              `);
-
-              const splashLogo = await sharp(src)
-                .resize(logoSize, logoSize, { fit: 'cover' })
-                .composite([{ input: roundedMask, blend: 'dest-in' }])
-                .png()
-                .toBuffer();
-
-              await sharp(splashBgSvg)
-                .composite([
-                  { input: splashLogo, left: Math.round((2732 - logoSize) / 2), top: 830 }
-                ])
+              // 4. Fallback Splash Screen voor oudere Android-versies (< Android 12)
+              await sharp({
+                create: { width: 2732, height: 2732, channels: 4, background: '#153E75' }
+              })
+                .composite([{ input: fgLogo, gravity: 'center' }])
                 .png()
                 .toFile('assets/splash.png.tmp');
 
-              console.log('✅ Alle asset-PNGs (Adaptive Icon + aangepast Splash Screen) succesvol aangemaakt');
+              console.log('✅ Alle asset-PNGs succesvol aangemaakt');
             })().catch((err) => {
               console.error(err);
               process.exit(1);
@@ -154,22 +116,36 @@ jobs:
           mv assets/splash.png.tmp assets/splash.png
           cp assets/splash.png assets/splash-dark.png
 
-          # Bewaar de hash van het standaard Capacitor-icoon VOOR het genereren
           BEFORE_HASH=$(md5sum android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png | awk '{print $1}')
 
           echo "=== Genereer Android iconen & splash screens ==="
           npx capacitor-assets generate --android --iconBackgroundColor '#153E75' --splashBackgroundColor '#153E75' --splashBackgroundColorDark '#153E75'
 
-          # Controleer of ic_launcher_foreground.png nu echt is overschreven!
           AFTER_HASH=$(md5sum android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png | awk '{print $1}')
-          echo "Hash ic_launcher_foreground VOOR: $BEFORE_HASH"
-          echo "Hash ic_launcher_foreground NA:   $AFTER_HASH"
-
           if [ "$BEFORE_HASH" = "$AFTER_HASH" ]; then
             echo "❌ FOUT: ic_launcher_foreground.png is NIET overschreven door capacitor-assets!"
             exit 1
           fi
-          echo "✅ Adaptive Icon & Splash Screen zijn succesvol gegenereerd!"
+
+          # Android 12+ Splash Screen thema instellen voor zowel lichte als donkere modus (voorkomt grijs scherm!)
+          for DIR in values-v31 values-night-v31; do
+            mkdir -p "android/app/src/main/res/$DIR"
+            cat << 'XML' > "android/app/src/main/res/$DIR/styles.xml"
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+                  <item name="windowSplashScreenBackground">#153E75</item>
+                  <item name="android:windowSplashScreenBackground">#153E75</item>
+                  <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
+                  <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
+                  <item name="android:windowBackground">#153E75</item>
+                  <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
+              </style>
+          </resources>
+          XML
+          done
+
+          echo "✅ Adaptive Icon & Android 12+ Splash Thema (licht + donker) zijn succesvol gegenereerd!"
 
           npx cap sync android
           sed -i "s/versionCode 1/versionCode ${{ github.run_number }}/g" android/app/build.gradle
