@@ -52,9 +52,10 @@ jobs:
           echo "✅ Bronlogo gevonden: $SOURCE_LOGO"
 
           # Maak alle bestanden die @capacitor/assets nodig heeft voor Adaptive Icons + Splash Screen
-          node -e "
+          SOURCE_LOGO="$SOURCE_LOGO" node << 'EOF'
             const sharp = require('sharp');
-            const src = process.argv[1];
+            const src = process.env.SOURCE_LOGO;
+
             (async () => {
               // 1. Standaard icoon (1024x1024)
               await sharp(src)
@@ -83,7 +84,7 @@ jobs:
                 .toFile('assets/icon-background.png');
 
               // 4. Stijlvol Splash Screen (2732x2732) op basis van het KlusBazen-logo
-              const splashBgSvg = Buffer.from(\`
+              const splashBgSvg = Buffer.from(`
                 <svg width="2732" height="2732" xmlns="http://www.w3.org/2000/svg">
                   <defs>
                     <radialGradient id="bgGrad" cx="50%" cy="46%" r="62%">
@@ -119,15 +120,15 @@ jobs:
                     fill="#FDE68A"
                   >Samen klussen, samen vieren!</text>
                 </svg>
-              \`);
+              `);
 
               // Afgerond masker voor het gecentreerde logo op het splash screen
               const logoSize = 860;
-              const roundedMask = Buffer.from(\`
-                <svg width="\${logoSize}" height="\${logoSize}" xmlns="http://www.w3.org/2000/svg">
-                  <rect width="\${logoSize}" height="\${logoSize}" rx="190" ry="190" fill="#ffffff" />
+              const roundedMask = Buffer.from(`
+                <svg width="${logoSize}" height="${logoSize}" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="${logoSize}" height="${logoSize}" rx="190" ry="190" fill="#ffffff" />
                 </svg>
-              \`);
+              `);
 
               const splashLogo = await sharp(src)
                 .resize(logoSize, logoSize, { fit: 'cover' })
@@ -143,8 +144,11 @@ jobs:
                 .toFile('assets/splash.png.tmp');
 
               console.log('✅ Alle asset-PNGs (Adaptive Icon + aangepast Splash Screen) succesvol aangemaakt');
-            })().catch(err => { console.error(err); process.exit(1); });
-          " "$SOURCE_LOGO"
+            })().catch((err) => {
+              console.error(err);
+              process.exit(1);
+            });
+          EOF
 
           mv assets/icon-only.png.tmp assets/icon-only.png
           mv assets/splash.png.tmp assets/splash.png
