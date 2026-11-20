@@ -63,29 +63,36 @@ const FREQUENCY_OPTIONS = [
   { id: 'month', label: 'Per maand', shortLabel: 'maand' },
 ];
 
+const DUTCH_DAYS = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag'];
+
 // ============================================================================
-// HULPFUNCTIES VOOR PERIODES & BESCHIKBAARHEID
+// HULPFUNCTIES VOOR PERIODES, SPREIDING & BESCHIKBAARHEID
 // ============================================================================
 
-const getPeriodStartTimestamp = (period, now = new Date()) => {
+const getPeriodBounds = (period, now = new Date()) => {
   const start = new Date(now);
   start.setHours(0, 0, 0, 0);
 
   if (period === 'day') {
-    return start.getTime();
+    const end = new Date(start);
+    end.setDate(end.getDate() + 1);
+    return { start: start.getTime(), end: end.getTime() };
   }
   if (period === 'week') {
-    // Maandag als start van de week
-    const dayOfWeek = start.getDay(); // 0 = zondag, 1 = maandag, ...
-    const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-    start.setDate(start.getDate() - diffToMonday);
-    return start.getTime();
+    // Zondag als start van de nieuwe week (getDay(): 0 = zondag, 1 = maandag, ...)
+    const dayOfWeek = start.getDay();
+    start.setDate(start.getDate() - dayOfWeek);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 7);
+    return { start: start.getTime(), end: end.getTime() };
   }
   if (period === 'month') {
     start.setDate(1);
-    return start.getTime();
+    const end = new Date(start);
+    end.setMonth(end.getMonth() + 1);
+    return { start: start.getTime(), end: end.getTime() };
   }
-  return 0;
+  return { start: 0, end: 0 };
 };
 
 const normalizeCompletionEntry = (entry) => {
@@ -108,28 +115,53 @@ const getChoreCompletions = (chore) => {
   return [];
 };
 
-const getCompletionsInCurrentPeriod = (chore, memberId = null, now = new Date()) => {
+const getRelevantCompletionsInPeriod = (chore, memberId = null, now = new Date()) => {
   const period = chore.frequencyPeriod || 'none';
-  if (period === 'none') return 0;
+  if (period === 'none') return [];
 
-  const periodStart = getPeriodStartTimestamp(period, now);
+  const { start } = getPeriodBounds(period, now);
   const taskType = chore.taskType || 'family';
 
   return getChoreCompletions(chore).filter((entry) => {
-    if (entry.ts < periodStart) return false;
+    if (entry.ts < start) return false;
     if (taskType === 'individual') {
       return memberId ? entry.memberId === memberId : false;
     }
     return true;
-  }).length;
+  });
+};
+
+const getCompletionsInCurrentPeriod = (chore, memberId = null, now = new Date()) => {
+  return getRelevantCompletionsInPeriod(chore, memberId, now).length;
+};
+
+// Geeft null terug als het klusje nu beschikbaar is, of het exacte tijdstip (ms) waarop het weer zichtbaar wordt
+const getNextAvailableTimestamp = (chore, memberId = null, now = new Date()) => {
+  const period = chore.frequencyPeriod || 'none';
+  if (period === 'none') return null;
+
+  const maxCount = Math.max(1, Number(chore.frequencyCount) || 1);
+  const { start, end } = getPeriodBounds(period, now);
+  const relevant = getRelevantCompletionsInPeriod(chore, memberId, now);
+
+  if (relevant.length === 0) return null;
+
+  // Maximaal aantal keer in deze periode al bereikt -> wachten tot de volgende periode (bijv. zondag 00:00)
+  if (relevant.length >= maxCount) {
+    return end;
+  }
+
+  // Nog niet aan het maximum, maar wel even wachten zodat uitvoeringen netjes over de periode worden verspreid
+  // Bijv. 2x per week -> wachttijd = 3,5 dag (halve week); 3x per week -> 1/3 week
+  const lastTs = Math.max(...relevant.map((entry) => entry.ts));
+  const cooldownMs = Math.floor((end - start) / maxCount);
+  const nextAvailable = Math.min(end, lastTs + cooldownMs);
+
+  return now.getTime() < nextAvailable ? nextAvailable : null;
 };
 
 const isChoreAvailable = (chore, memberId = null, now = new Date()) => {
-  const period = chore.frequencyPeriod || 'none';
-  if (period === 'none') return true;
-
-  const maxCount = Math.max(1, Number(chore.frequencyCount) || 1);
-  return getCompletionsInCurrentPeriod(chore, memberId, now) < maxCount;
+  return getNextAvailableTimestamp(chore, memberId, now) === null;
 };
 
 const getFrequencyLabel = (chore) => {
@@ -141,11 +173,36 @@ const getFrequencyLabel = (chore) => {
   return `${count}x / ${opt?.shortLabel || period}`;
 };
 
-const getNextAvailableLabel = (period) => {
-  if (period === 'day') return 'Morgen weer zichtbaar';
-  if (period === 'week') return 'Maandag weer zichtbaar';
-  if (period === 'month') return 'Volgende maand weer zichtbaar';
-  return '';
+const getNextAvailableLabel = (chore, memberId = null, now = new Date()) => {
+  const nextTs = getNextAvailableTimestamp(chore, memberId, now);
+  if (!nextTs) return '';
+
+  const nextDate = new Date(nextTs);
+  const isMidnight = nextDate.getHours() === 0 && nextDate.getMinutes() === 0;
+  const timeStr = nextDate.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+
+  const todayStart = new Date(now);
+  todayStart.setHours(0, 0, 0, 0);
+  const targetDayStart = new Date(nextDate);
+  targetDayStart.setHours(0, 0, 0, 0);
+  const diffDays = Math.round((targetDayStart - todayStart) / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) {
+    return `Vandaag om ${timeStr} weer zichtbaar`;
+  }
+  if (diffDays === 1) {
+    return isMidnight ? 'Morgen weer zichtbaar' : `Morgen om ${timeStr} weer zichtbaar`;
+  }
+  if (diffDays > 1 && diffDays <= 7) {
+    const dayName = DUTCH_DAYS[nextDate.getDay()];
+    return isMidnight ? `${dayName} weer zichtbaar` : `${dayName} om ${timeStr} weer zichtbaar`;
+  }
+  if (chore.frequencyPeriod === 'month' && isMidnight && nextDate.getDate() === 1) {
+    return 'Volgende maand weer zichtbaar';
+  }
+
+  const dateStr = nextDate.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' });
+  return isMidnight ? `${dateStr} weer zichtbaar` : `${dateStr} om ${timeStr} weer zichtbaar`;
 };
 
 const normalizeChores = (chores) => {
@@ -279,7 +336,7 @@ export default function App() {
   const [firebaseInput, setFirebaseInput] = useState(firebaseUrl);
   const [syncStatus, setSyncStatus] = useState(firebaseUrl ? 'connected' : 'local'); // 'local' | 'syncing' | 'connected' | 'error'
 
-  // Ververs elke minuut de tijd zodat verlopen periodes (bijv. na middernacht) vanzelf weer zichtbaar worden
+  // Ververs elke minuut de tijd zodat verlopen periodes/wachttijden vanzelf weer zichtbaar worden
   useEffect(() => {
     const timer = setInterval(() => setNowTick(Date.now()), 60000);
     return () => clearInterval(timer);
@@ -423,7 +480,7 @@ export default function App() {
 
   const activeMember = data.members.find((m) => m.id === activeMemberId) || data.members[0];
 
-  // Splits klusjes in beschikbaar vs. al gedaan in de huidige periode (rekening houdend met gezinstaak vs. individueel)
+  // Splits klusjes in beschikbaar vs. tijdelijk verborgen (rekening houdend met spreiding, zondag-start en gezinstaak vs. individueel)
   const availableChores = data.chores.filter((c) => isChoreAvailable(c, activeMember?.id, nowDate));
   const completedPeriodChores = data.chores.filter((c) => !isChoreAvailable(c, activeMember?.id, nowDate));
 
@@ -982,9 +1039,9 @@ export default function App() {
                   <div className="bg-white rounded-3xl p-6 text-center border border-emerald-100 space-y-1">
                     <div className="text-3xl">🎉</div>
                     <p className="text-sm font-bold text-slate-700">
-                      Alle klusjes voor {activeMember?.name || 'deze periode'} zijn al gedaan!
+                      Alle klusjes voor {activeMember?.name || 'nu'} zijn even gedaan!
                     </p>
-                    <p className="text-xs text-slate-400">Ze verschijnen automatisch weer zodra de volgende periode begint.</p>
+                    <p className="text-xs text-slate-400">Ze verschijnen vanzelf weer zodra ze weer aan de beurt zijn.</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -1059,7 +1116,7 @@ export default function App() {
                   </div>
                 )}
 
-                {/* Ingeklapt overzicht van klusjes die voor deze periode al gedaan zijn (voor beheer/inzicht) */}
+                {/* Ingeklapt overzicht van klusjes die tijdelijk op pauze staan of al gedaan zijn */}
                 {completedPeriodChores.length > 0 && (
                   <div className="pt-2">
                     <button
@@ -1069,7 +1126,7 @@ export default function App() {
                     >
                       <span className="flex items-center gap-1.5">
                         <Clock className="w-3.5 h-3.5" />
-                        Al gedaan in deze periode ({completedPeriodChores.length})
+                        Al gedaan / even op pauze ({completedPeriodChores.length})
                       </span>
                       {showCompletedChores ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                     </button>
@@ -1078,6 +1135,7 @@ export default function App() {
                       <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {completedPeriodChores.map((chore) => {
                           const isIndividual = chore.taskType === 'individual';
+                          const nextLabel = getNextAvailableLabel(chore, activeMember?.id, nowDate);
                           return (
                             <div
                               key={chore.id}
@@ -1092,8 +1150,8 @@ export default function App() {
                                   <p className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
                                     <Clock className="w-3 h-3 shrink-0" />
                                     <span className="truncate">
-                                      {getNextAvailableLabel(chore.frequencyPeriod)}
-                                      {isIndividual && activeMember ? ` (voor ${activeMember.name})` : ''}
+                                      {nextLabel}
+                                      {isIndividual && activeMember ? ` (${activeMember.name})` : ''}
                                     </span>
                                   </p>
                                 </div>
@@ -1743,13 +1801,17 @@ export default function App() {
                 <p className="text-[11px] text-slate-400">
                   {choreFreqPeriodInput === 'none'
                     ? 'Dit klusje blijft altijd zichtbaar en mag zo vaak als nodig gedaan worden.'
-                    : choreTaskTypeInput === 'individual'
-                    ? `Ieder gezinslid kan dit klusje ${choreFreqCountInput}x per ${
+                    : `${
+                        choreTaskTypeInput === 'individual'
+                          ? 'Ieder gezinslid mag'
+                          : 'Het gezin mag'
+                      } dit klusje ${choreFreqCountInput}x per ${
                         FREQUENCY_OPTIONS.find((o) => o.id === choreFreqPeriodInput)?.shortLabel
-                      } doen.`
-                    : `Zodra iemand dit ${choreFreqCountInput}x heeft gedaan, verdwijnt het voor het hele gezin tot de volgende ${
-                        FREQUENCY_OPTIONS.find((o) => o.id === choreFreqPeriodInput)?.shortLabel
-                      }.`}
+                      } doen${
+                        choreFreqCountInput > 1
+                          ? ' (automatisch verspreid over de periode)'
+                          : ''
+                      }.${choreFreqPeriodInput === 'week' ? ' Een nieuwe week start op zondag.' : ''}`}
                 </p>
               </div>
 
