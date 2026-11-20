@@ -107,7 +107,17 @@ export default function App() {
 
   // UI & Navigatie state
   const [activeTab, setActiveTab] = useState('chores'); // 'chores' | 'leaderboard' | 'reward' | 'settings'
-  const [activeMemberId, setActiveMemberId] = useState(() => data.members[0]?.id || 'm1');
+  const [activeMemberId, setActiveMemberId] = useState(() => {
+    try {
+      const savedId = localStorage.getItem('klusjes_active_member_id');
+      if (savedId && data.members.some((m) => m.id === savedId)) {
+        return savedId;
+      }
+    } catch (e) {
+      // Negeer localStorage-fouten
+    }
+    return data.members[0]?.id || 'm1';
+  });
   const [toast, setToast] = useState(null);
   const [showCelebration, setShowCelebration] = useState(false);
 
@@ -117,19 +127,16 @@ export default function App() {
   const [editingMember, setEditingMember] = useState(null);
   const [confirmDeleteMember, setConfirmDeleteMember] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
-
-  // Formulier state: Nieuw klusje
-  const [newChoreTitle, setNewChoreTitle] = useState('');
-  const [newChoreSize, setNewChoreSize] = useState('klein');
-  const [newChoreEmoji, setNewChoreEmoji] = useState('✨');
-
-  // Formulier state: Nieuw gezinslid
-  const [newMemberName, setNewMemberName] = useState('');
-  const [newMemberAvatar, setNewMemberAvatar] = useState('🐼');
-
-  // Formulier state: Gezinslid bewerken
+  const [confirmChore, setConfirmChore] = useState(null);
   const [editMemberName, setEditMemberName] = useState('');
   const [editMemberAvatar, setEditMemberAvatar] = useState('🐼');
+
+  // Formulier state: Nieuw klusje & nieuw gezinslid
+  const [newChoreTitle, setNewChoreTitle] = useState('');
+  const [newChoreEmoji, setNewChoreEmoji] = useState('🧹');
+  const [newChoreSize, setNewChoreSize] = useState('klein');
+  const [newMemberName, setNewMemberName] = useState('');
+  const [newMemberAvatar, setNewMemberAvatar] = useState('🐼');
 
   // Formulier state: Beloning aanpassen
   const [editRewardTitle, setEditRewardTitle] = useState(data.reward.title);
@@ -156,6 +163,19 @@ export default function App() {
       setActiveMemberId(data.members[0].id);
     }
   }, [data.members, activeMemberId]);
+
+  // Onthoud het laatst geselecteerde gezinslid op dit apparaat
+  useEffect(() => {
+    try {
+      if (activeMemberId) {
+        localStorage.setItem('klusjes_active_member_id', activeMemberId);
+      } else {
+        localStorage.removeItem('klusjes_active_member_id');
+      }
+    } catch (e) {
+      console.error('Kon geselecteerd gezinslid niet opslaan:', e);
+    }
+  }, [activeMemberId]);
 
   // Sla wijzigingen lokaal op
   useEffect(() => {
@@ -291,8 +311,17 @@ export default function App() {
   // ACTIES (KLUSJES, LEDEN, BELONING)
   // ============================================================================
 
-  const handleCompleteChore = (chore) => {
+  const handleRequestCompleteChore = (chore) => {
     if (!activeMember) {
+      showToast('Voeg eerst een gezinslid toe!', '👨‍👩‍👧‍👦');
+      setShowAddMember(true);
+      return;
+    }
+    setConfirmChore(chore);
+  };
+
+  const handleCompleteChore = (chore) => {
+    if (!activeMember || !chore) {
       showToast('Voeg eerst een gezinslid toe!', '👨‍👩‍👧‍👦');
       setShowAddMember(true);
       return;
@@ -320,6 +349,7 @@ export default function App() {
       ],
     }));
 
+    setConfirmChore(null);
     showToast(`+${chore.points} punten voor ${activeMember.name}!`, chore.emoji);
 
     // Vier feest als het doel zojuist is behaald!
@@ -357,6 +387,19 @@ export default function App() {
       chores: prev.chores.filter((c) => c.id !== id),
     }));
     showToast('Klusje verwijderd', '🗑️');
+  };
+
+  const handleUndoHistoryItem = (item) => {
+    updateData((prev) => ({
+      ...prev,
+      members: prev.members.map((m) =>
+        m.id === item.memberId
+          ? { ...m, points: Math.max(0, (m.points || 0) - (item.points || 0)) }
+          : m
+      ),
+      history: (prev.history || []).filter((h) => h.id !== item.id),
+    }));
+    showToast(`${item.choreTitle} ongedaan gemaakt (-${item.points} pnt)`, '↩️');
   };
 
   const handleAddMember = (e) => {
@@ -439,7 +482,6 @@ export default function App() {
     e.preventDefault();
     if (!editRewardTitle.trim()) return;
 
-    // Gebruik het standaard icoon als de gebruiker het veld leeg laat
     const finalEmoji = editRewardEmoji.trim() || DEFAULT_REWARD_EMOJI;
 
     updateData((prev) => ({
@@ -736,7 +778,7 @@ export default function App() {
                               <Trash2 className="w-4 h-4" />
                             </button>
                             <button
-                              onClick={() => handleCompleteChore(chore)}
+                              onClick={() => handleRequestCompleteChore(chore)}
                               className="bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl flex items-center gap-1 shadow-sm transition"
                             >
                               <Check className="w-4 h-4 stroke-[3]" /> Gedaan
@@ -752,128 +794,99 @@ export default function App() {
           )}
 
           {/* ============================================================== */}
-          {/* TAB 2: RANGLIJST                                               */}
+          {/* TAB 2: RANGLIJST & GESCHIEDENIS                                */}
           {/* ============================================================== */}
           {activeTab === 'leaderboard' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-              <div className="space-y-4">
-                {/* Erepodium Top 3 */}
-                <section className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-extrabold text-sm text-slate-800 flex items-center gap-1.5">
-                      <Trophy className="w-4 h-4 text-amber-500" /> Gezinspodium
-                    </h3>
-                    <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full">
-                      Totaal: {totalPoints} pnt
-                    </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              {/* Ranglijst */}
+              <section className="space-y-3">
+                <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                  <Trophy className="w-3.5 h-3.5 text-amber-500" /> Gezinsranglijst
+                </h3>
+
+                {sortedMembers.length === 0 ? (
+                  <div className="bg-white rounded-3xl p-6 text-center border border-slate-100 text-slate-400 text-sm">
+                    Nog geen gezinsleden toegevoegd.
                   </div>
-
-                  <div className="flex items-end justify-center gap-3 pt-4 pb-2">
-                    {/* 2e plek */}
-                    {sortedMembers[1] && (
-                      <div className="flex flex-col items-center w-24">
-                        <span className="text-3xl mb-1">{sortedMembers[1].avatar}</span>
-                        <span className="text-xs font-bold text-slate-700 truncate w-full text-center">
-                          {sortedMembers[1].name}
-                        </span>
-                        <span className="text-[11px] font-extrabold text-slate-500 mb-1.5">
-                          {sortedMembers[1].points || 0} pnt
-                        </span>
-                        <div className="w-full h-16 bg-gradient-to-t from-slate-300 to-slate-200 rounded-t-2xl flex items-center justify-center font-black text-slate-600 text-lg shadow-inner">
-                          2
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 1e plek */}
-                    {sortedMembers[0] && (
-                      <div className="flex flex-col items-center w-28">
-                        <span className="text-xs font-black text-amber-500 mb-0.5 flex items-center gap-0.5">
-                          <Flame className="w-3.5 h-3.5 fill-amber-400" /> #1
-                        </span>
-                        <span className="text-4xl mb-1">{sortedMembers[0].avatar}</span>
-                        <span className="text-xs font-extrabold text-slate-900 truncate w-full text-center">
-                          {sortedMembers[0].name}
-                        </span>
-                        <span className="text-xs font-black text-amber-600 mb-1.5">
-                          {sortedMembers[0].points || 0} pnt
-                        </span>
-                        <div className="w-full h-24 bg-gradient-to-t from-amber-400 to-yellow-300 rounded-t-2xl flex items-center justify-center font-black text-amber-900 text-2xl shadow-md">
-                          1
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 3e plek */}
-                    {sortedMembers[2] && (
-                      <div className="flex flex-col items-center w-24">
-                        <span className="text-3xl mb-1">{sortedMembers[2].avatar}</span>
-                        <span className="text-xs font-bold text-slate-700 truncate w-full text-center">
-                          {sortedMembers[2].name}
-                        </span>
-                        <span className="text-[11px] font-extrabold text-slate-500 mb-1.5">
-                          {sortedMembers[2].points || 0} pnt
-                        </span>
-                        <div className="w-full h-12 bg-gradient-to-t from-orange-300 to-amber-200 rounded-t-2xl flex items-center justify-center font-black text-orange-800 text-lg shadow-inner">
-                          3
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </section>
-
-                {/* Volledige Bijdrage Lijst */}
-                <section className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
-                  <h3 className="font-extrabold text-sm text-slate-800">Bijdrage per gezinslid</h3>
-                  <div className="space-y-3">
+                ) : (
+                  <div className="space-y-2.5">
                     {sortedMembers.map((member, idx) => {
-                      const pct = totalPoints > 0 ? Math.round(((member.points || 0) / totalPoints) * 100) : 0;
+                      const share = totalPoints > 0 ? Math.round(((member.points || 0) / totalPoints) * 100) : 0;
+                      const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`;
                       return (
-                        <div key={member.id} className="space-y-1">
-                          <div className="flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-2">
-                              <span className="font-black text-slate-400 w-4">{idx + 1}.</span>
-                              <span className="text-lg">{member.avatar}</span>
-                              <span className="font-bold text-slate-800">{member.name}</span>
-                            </div>
-                            <div className="font-bold text-slate-700">
-                              {member.points || 0} pnt <span className="text-slate-400 font-semibold">({pct}%)</span>
-                            </div>
+                        <div
+                          key={member.id}
+                          className={`bg-white rounded-2xl p-3.5 shadow-sm border flex items-center gap-3 ${
+                            idx === 0 ? 'border-amber-200 bg-amber-50/30' : 'border-slate-100'
+                          }`}
+                        >
+                          <div className="w-8 text-center font-black text-lg shrink-0">{medal}</div>
+                          <div className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-2xl shrink-0">
+                            {member.avatar}
                           </div>
-                          <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-indigo-500 rounded-full transition-all duration-500"
-                              style={{ width: `${pct}%` }}
-                            />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-bold text-sm text-slate-800 truncate">{member.name}</span>
+                              <span className="text-sm font-black text-indigo-600 shrink-0">
+                                {member.points || 0} pnt
+                              </span>
+                            </div>
+                            <div className="mt-1.5 flex items-center gap-2">
+                              <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full transition-all duration-500"
+                                  style={{ width: `${share}%` }}
+                                />
+                              </div>
+                              <span className="text-[11px] font-bold text-slate-400 w-9 text-right">{share}%</span>
+                            </div>
                           </div>
                         </div>
                       );
                     })}
                   </div>
-                </section>
-              </div>
+                )}
+              </section>
 
-              {/* Recente Activiteiten */}
-              <section className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
-                <h3 className="font-extrabold text-sm text-slate-800">Laatst gedane klusjes</h3>
+              {/* Laatst gedane klusjes (met ongedaan maken knop) */}
+              <section className="space-y-3">
+                <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                  <Flame className="w-3.5 h-3.5 text-orange-500" /> Laatst gedane klusjes
+                </h3>
+
                 {(!data.history || data.history.length === 0) ? (
-                  <p className="text-xs text-slate-400 text-center py-3">Nog geen klusjes afgevinkt in deze ronde.</p>
+                  <div className="bg-white rounded-3xl p-6 text-center border border-slate-100 text-slate-400 text-sm">
+                    Nog geen klusjes afgevinkt in deze ronde.
+                  </div>
                 ) : (
-                  <div className="space-y-2.5">
-                    {data.history.slice(0, 10).map((item) => (
-                      <div key={item.id} className="flex items-center justify-between text-xs border-b border-slate-50 pb-2 last:border-0 last:pb-0">
+                  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm divide-y divide-slate-100 overflow-hidden">
+                    {data.history.map((item) => (
+                      <div key={item.id} className="p-3 flex items-center justify-between gap-2.5">
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <span className="text-xl shrink-0">{item.memberAvatar}</span>
+                          <span className="text-xl bg-slate-50 w-9 h-9 rounded-xl flex items-center justify-center shrink-0">
+                            {item.memberAvatar}
+                          </span>
                           <div className="min-w-0">
-                            <p className="font-bold text-slate-800 truncate">
+                            <p className="text-xs font-bold text-slate-800 truncate">
                               {item.memberName} <span className="font-normal text-slate-500">deed</span> {item.choreTitle}
                             </p>
-                            <p className="text-[10px] text-slate-400">{formatTimeAgo(item.timestamp)}</p>
+                            <p className="text-[11px] text-slate-400">{formatTimeAgo(item.timestamp)}</p>
                           </div>
                         </div>
-                        <span className="font-extrabold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full shrink-0">
-                          +{item.points}
-                        </span>
+
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className="text-xs font-extrabold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                            +{item.points}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleUndoHistoryItem(item)}
+                            className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition"
+                            title="Klusje ongedaan maken"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -886,89 +899,79 @@ export default function App() {
           {/* TAB 3: BELONING & TROFEEËNKAST                                 */}
           {/* ============================================================== */}
           {activeTab === 'reward' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-              {/* Beloning Instellen */}
-              <section className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-4">
-                <div className="flex items-center gap-2">
-                  <div className="bg-purple-100 p-2 rounded-xl text-purple-600">
-                    <Gift className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-extrabold text-sm text-slate-800">Gezinsbeloning instellen</h3>
-                    <p className="text-xs text-slate-500">Waar sparen jullie samen voor?</p>
-                  </div>
-                </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              {/* Beloning instellen */}
+              <section className="bg-white rounded-3xl p-4 sm:p-5 shadow-sm border border-slate-100 space-y-4">
+                <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                  <Gift className="w-3.5 h-3.5 text-indigo-500" /> Gezinsbeloning instellen
+                </h3>
 
                 {/* Snelle ideeën */}
-                <div>
-                  <span className="block text-[11px] font-bold text-slate-500 mb-1.5">Snelle ideeën:</span>
-                  <div className="flex gap-1.5 overflow-x-auto pb-1">
-                    {REWARD_PRESETS.map((preset) => (
-                      <button
-                        key={preset.title}
-                        type="button"
-                        onClick={() => {
-                          setEditRewardTitle(preset.title);
-                          setEditRewardEmoji(preset.emoji);
-                          setEditRewardTarget(preset.target);
-                        }}
-                        className="bg-slate-50 hover:bg-indigo-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-700 flex items-center gap-1.5 shrink-0 transition"
-                      >
-                        <span>{preset.emoji}</span>
-                        <span>{preset.title.split(' ').slice(0, 3).join(' ')}</span>
-                      </button>
-                    ))}
-                  </div>
+                <div className="flex gap-1.5 overflow-x-auto pb-1">
+                  {REWARD_PRESETS.map((preset) => (
+                    <button
+                      key={preset.title}
+                      type="button"
+                      onClick={() => {
+                        setEditRewardTitle(preset.title);
+                        setEditRewardEmoji(preset.emoji);
+                        setEditRewardTarget(preset.target);
+                      }}
+                      className="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold px-2.5 py-1.5 rounded-xl shrink-0 transition"
+                    >
+                      {preset.emoji} {preset.title.split(' ').slice(0, 3).join(' ')}
+                    </button>
+                  ))}
                 </div>
 
                 <form onSubmit={handleSaveReward} className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-600 mb-1">Wat is de beloning?</label>
-                    <input
-                      type="text"
-                      required
-                      value={editRewardTitle}
-                      onChange={(e) => setEditRewardTitle(e.target.value)}
-                      placeholder="Bijv. Samen uit eten of Spelletjesavond"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-600 mb-1">Icoon (optioneel)</label>
+                  <div className="flex gap-2">
+                    <div className="w-16 shrink-0">
+                      <label className="block text-[11px] font-bold text-slate-500 mb-1">Icoon</label>
                       <input
                         type="text"
                         value={editRewardEmoji}
                         onChange={(e) => setEditRewardEmoji(e.target.value)}
-                        placeholder={DEFAULT_REWARD_EMOJI}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full text-center text-xl bg-slate-50 border border-slate-200 rounded-xl py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       />
                     </div>
+                    <div className="flex-1">
+                      <label className="block text-[11px] font-bold text-slate-500 mb-1">Beloning</label>
+                      <input
+                        type="text"
+                        required
+                        value={editRewardTitle}
+                        onChange={(e) => setEditRewardTitle(e.target.value)}
+                        placeholder="Bijv. Samen uit eten"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2.5">
                     <div>
-                      <label className="block text-xs font-bold text-slate-600 mb-1">Doel (punten)</label>
+                      <label className="block text-[11px] font-bold text-slate-500 mb-1">Doelpunten</label>
                       <input
                         type="number"
                         min="10"
-                        step="10"
+                        step="5"
                         required
                         value={editRewardTarget}
                         onChange={(e) => setEditRewardTarget(e.target.value)}
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       />
                     </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-600 mb-1 flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5" /> Einddatum van deze periode
-                    </label>
-                    <input
-                      type="date"
-                      value={editRewardDate}
-                      onChange={(e) => setEditRewardDate(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-500 mb-1 flex items-center gap-1">
+                        <Calendar className="w-3 h-3" /> Einddatum
+                      </label>
+                      <input
+                        type="date"
+                        value={editRewardDate}
+                        onChange={(e) => setEditRewardDate(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
                   </div>
 
                   <button
@@ -978,154 +981,171 @@ export default function App() {
                     Beloning opslaan
                   </button>
                 </form>
-              </section>
 
-              <div className="space-y-4">
                 {/* Nieuwe ronde starten */}
-                <section className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-extrabold text-sm text-slate-800">Nieuwe periode starten</h3>
-                      <p className="text-xs text-slate-500">Zet alle punten weer op 0 voor een nieuwe ronde.</p>
-                    </div>
-                    <RotateCcw className="w-5 h-5 text-slate-400 shrink-0" />
-                  </div>
-
+                <div className="pt-3 border-t border-slate-100">
                   {!confirmReset ? (
                     <button
+                      type="button"
                       onClick={() => setConfirmReset(true)}
-                      className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs py-2.5 rounded-xl transition"
+                      className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition"
                     >
-                      {isGoalReached ? 'Beloning claimen & nieuwe ronde starten 🎉' : 'Punten resetten & opnieuw beginnen'}
+                      <RotateCcw className="w-3.5 h-3.5" /> Nieuwe ronde starten (punten op 0)
                     </button>
                   ) : (
-                    <div className="bg-rose-50 border border-rose-200 rounded-2xl p-3 space-y-2">
-                      <p className="text-xs font-bold text-rose-800 text-center">
-                        Weet je zeker dat je een nieuwe ronde wilt starten?
+                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 space-y-2">
+                      <p className="text-xs font-bold text-amber-900 text-center">
+                        {isGoalReached
+                          ? 'Beloning bijschrijven in de trofeeënkast en alle punten op 0 zetten?'
+                          : 'Alle punten terugzetten naar 0 voor een nieuwe ronde?'}
                       </p>
                       <div className="flex gap-2">
                         <button
+                          type="button"
                           onClick={() => setConfirmReset(false)}
                           className="flex-1 bg-white border border-slate-200 text-slate-600 font-bold text-xs py-2 rounded-xl"
                         >
                           Annuleren
                         </button>
                         <button
+                          type="button"
                           onClick={handleClaimAndStartNewRound}
-                          className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs py-2 rounded-xl"
+                          className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs py-2 rounded-xl"
                         >
-                          Ja, start nieuw!
+                          Ja, starten!
                         </button>
                       </div>
                     </div>
                   )}
-                </section>
+                </div>
+              </section>
 
-                {/* Trofeeënkast */}
-                <section className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
-                  <h3 className="font-extrabold text-sm text-slate-800 flex items-center gap-1.5">
-                    <Award className="w-4 h-4 text-amber-500" /> Behaalde beloningen
-                  </h3>
-                  {(!data.pastRewards || data.pastRewards.length === 0) ? (
-                    <p className="text-xs text-slate-400 text-center py-2">Nog geen behaalde beloningen.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {data.pastRewards.map((pr) => (
-                        <div key={pr.id} className="flex items-center justify-between gap-2 bg-amber-50/70 border border-amber-100 rounded-2xl p-3">
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <span className="text-2xl">{pr.emoji || DEFAULT_REWARD_EMOJI}</span>
-                            <div className="min-w-0">
-                              <p className="font-bold text-xs text-slate-800 truncate">{pr.title}</p>
-                              <p className="text-[10px] text-slate-500">{pr.date}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <span className="text-xs font-extrabold text-amber-700">{pr.totalPoints} pnt</span>
-                            <button
-                              type="button"
-                              onClick={() => handleDeletePastReward(pr.id)}
-                              className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-white/80 rounded-lg transition"
-                              title="Behaalde beloning verwijderen"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+              {/* Trofeeënkast / Behaalde beloningen */}
+              <section className="space-y-3">
+                <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                  <Award className="w-3.5 h-3.5 text-amber-500" /> Behaalde beloningen
+                </h3>
+
+                {(!data.pastRewards || data.pastRewards.length === 0) ? (
+                  <div className="bg-white rounded-3xl p-6 text-center border border-slate-100 text-slate-400 text-sm">
+                    Nog geen behaalde beloningen in de trofeeënkast.
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {data.pastRewards.map((pr) => (
+                      <div
+                        key={pr.id}
+                        className="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-100 flex items-center justify-between gap-3"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className="text-2xl bg-amber-50 w-11 h-11 rounded-xl flex items-center justify-center shrink-0">
+                            {pr.emoji || DEFAULT_REWARD_EMOJI}
+                          </span>
+                          <div className="min-w-0">
+                            <h4 className="font-bold text-sm text-slate-800 truncate">{pr.title}</h4>
+                            <p className="text-xs text-slate-400">
+                              {pr.date} • <span className="font-bold text-amber-600">{pr.totalPoints} pnt</span>
+                            </p>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </section>
-              </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePastReward(pr.id)}
+                          className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition shrink-0"
+                          title="Behaalde beloning verwijderen"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
             </div>
           )}
 
           {/* ============================================================== */}
-          {/* TAB 4: FIREBASE & INSTELLINGEN                                 */}
+          {/* TAB 4: APP & FIREBASE SYNC                                     */}
           {/* ============================================================== */}
           {activeTab === 'settings' && (
-            <div className="max-w-lg mx-auto">
-              {/* Firebase Realtime Database Koppeling */}
-              <section className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
-                <div className="flex items-center gap-2">
-                  <div className="bg-amber-100 p-2 rounded-xl text-amber-600">
-                    <Cloud className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-extrabold text-sm text-slate-800">Firebase Gedeelde Database</h3>
-                    <p className="text-xs text-slate-500">Synchroniseer live tussen alle telefoons in huis.</p>
-                  </div>
-                </div>
+            <section className="bg-white rounded-3xl p-4 sm:p-5 shadow-sm border border-slate-100 space-y-4 max-w-xl mx-auto">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                  <Cloud className="w-4 h-4 text-indigo-500" /> Firebase Live Synchronisatie
+                </h3>
+                <span
+                  className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                    syncStatus === 'connected'
+                      ? 'bg-emerald-50 text-emerald-700'
+                      : syncStatus === 'error'
+                      ? 'bg-rose-50 text-rose-700'
+                      : 'bg-slate-100 text-slate-600'
+                  }`}
+                >
+                  {syncStatus === 'connected' && 'Verbonden'}
+                  {syncStatus === 'syncing' && 'Synchroniseren...'}
+                  {syncStatus === 'error' && 'Verbindingsfout'}
+                  {syncStatus === 'local' && 'Lokale modus'}
+                </span>
+              </div>
 
-                <div className="bg-slate-50 rounded-xl p-3 text-xs text-slate-600 space-y-1">
-                  <p className="font-bold text-slate-700">In 3 stappen koppelen:</p>
-                  <p>1. Maak een gratis project op <strong>console.firebase.google.com</strong>.</p>
-                  <p>2. Ga naar <strong>Realtime Database</strong> en kies <em>Start in test mode</em>.</p>
-                  <p>3. Plak de database-URL (bijv. <code>https://...firebasedatabase.app</code>) hieronder:</p>
-                </div>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Vul hier de URL van jullie gratis <strong>Firebase Realtime Database</strong> in zodat alle telefoons in het gezin automatisch dezelfde klusjes, gezinsleden en punten zien.
+              </p>
 
-                <form onSubmit={handleSaveFirebase} className="space-y-2.5">
+              <form onSubmit={handleSaveFirebase} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">Database URL</label>
                   <input
                     type="url"
                     value={firebaseInput}
                     onChange={(e) => setFirebaseInput(e.target.value)}
-                    placeholder="https://mijn-gezin-default-rtdb.europe-west1.firebasedatabase.app"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="https://jouw-project-default-rtdb.europe-west1.firebasedatabase.app"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
-                  <div className="flex gap-2">
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm py-2.5 rounded-xl shadow-sm transition"
+                  >
+                    Koppelen & Synchroniseren
+                  </button>
+                  {firebaseUrl && (
                     <button
-                      type="submit"
-                      className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2.5 rounded-xl transition"
+                      type="button"
+                      onClick={() => pullFromFirebase(firebaseUrl, false)}
+                      className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm px-4 py-2.5 rounded-xl flex items-center gap-1.5 transition"
+                      title="Nu ophalen uit Firebase"
                     >
-                      {firebaseInput.trim() ? 'Koppelen & Synchroniseren' : 'Lokaal gebruiken'}
+                      <RefreshCw className={`w-4 h-4 ${syncStatus === 'syncing' ? 'animate-spin' : ''}`} />
                     </button>
-                    {firebaseUrl && (
-                      <button
-                        type="button"
-                        onClick={() => pullFromFirebase(firebaseUrl, false)}
-                        className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 rounded-xl flex items-center justify-center"
-                        title="Nu verversen"
-                      >
-                        <RefreshCw className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                </form>
-              </section>
-            </div>
+                  )}
+                </div>
+              </form>
+            </section>
           )}
         </div>
       </main>
 
-      {/* Onderste Android Navigatiebalk (met Safe Area zodat Android knoppen niet overlappen) */}
+      {/* Zwevende Toast Melding */}
+      {toast && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-xl flex items-center gap-2 whitespace-nowrap">
+          <span className="text-base">{toast.emoji}</span>
+          <span>{toast.message}</span>
+        </div>
+      )}
+
+      {/* Onderste Navigatiebalk (met safe-area padding voor Android-knoppen) */}
       <nav
-        className="bg-white border-t border-slate-200 pt-1.5 px-2 shrink-0 z-20"
+        className="bg-white border-t border-slate-200 px-2 pt-1.5 shadow-[0_-4px_20px_rgba(0,0,0,0.04)] z-20 shrink-0"
         style={{
           paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))',
           paddingLeft: 'max(0.5rem, env(safe-area-inset-left))',
           paddingRight: 'max(0.5rem, env(safe-area-inset-right))',
         }}
       >
-        <div className="max-w-lg mx-auto flex justify-around items-center">
+        <div className="max-w-lg mx-auto grid grid-cols-4 gap-1">
           {[
             { id: 'chores', label: 'Klusjes', icon: CheckSquare },
             { id: 'leaderboard', label: 'Ranglijst', icon: Trophy },
@@ -1137,13 +1157,14 @@ export default function App() {
             return (
               <button
                 key={tab.id}
+                type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-2xl transition ${
-                  isActive ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 hover:text-slate-600'
+                className={`flex flex-col items-center justify-center py-2 rounded-2xl transition ${
+                  isActive ? 'text-indigo-600 bg-indigo-50/80' : 'text-slate-400 hover:text-slate-600'
                 }`}
               >
                 <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5]' : 'stroke-2'}`} />
-                <span className="text-[10px] font-bold">{tab.label}</span>
+                <span className="text-[11px] font-bold mt-0.5">{tab.label}</span>
               </button>
             );
           })}
@@ -1151,12 +1172,68 @@ export default function App() {
       </nav>
 
       {/* ============================================================== */}
-      {/* TOAST MELDING                                                  */}
+      {/* MODAL: KLUSJE BEVESTIGEN                                       */}
       {/* ============================================================== */}
-      {toast && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 bg-slate-900/95 text-white px-4 py-2.5 rounded-full shadow-xl flex items-center gap-2 text-xs font-bold z-50 animate-bounce whitespace-nowrap">
-          <span className="text-base">{toast.emoji}</span>
-          <span>{toast.message}</span>
+      {confirmChore && activeMember && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-3xl p-5 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-extrabold text-base text-slate-800">Klusje bevestigen</h3>
+              <button
+                type="button"
+                onClick={() => setConfirmChore(null)}
+                className="p-1 text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-3">
+              {/* Gezinslid */}
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-3xl shrink-0">
+                  {activeMember.avatar}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Gezinslid</p>
+                  <p className="font-extrabold text-base text-slate-800 truncate">{activeMember.name}</p>
+                </div>
+              </div>
+
+              <div className="border-t border-slate-200/70" />
+
+              {/* Klusje & Punten */}
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="text-2xl shrink-0">{confirmChore.emoji}</span>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Klusje</p>
+                    <p className="font-bold text-sm text-slate-800 truncate">{confirmChore.title}</p>
+                  </div>
+                </div>
+                <span className="bg-amber-100 text-amber-800 font-black text-sm px-3 py-1.5 rounded-xl flex items-center gap-1 shrink-0">
+                  <Star className="w-4 h-4 fill-amber-500 text-amber-500" /> +{confirmChore.points} pnt
+                </span>
+              </div>
+            </div>
+
+            <div className="flex gap-2.5 pt-1">
+              <button
+                type="button"
+                onClick={() => setConfirmChore(null)}
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm py-3 rounded-xl transition"
+              >
+                Annuleren
+              </button>
+              <button
+                type="button"
+                onClick={() => handleCompleteChore(confirmChore)}
+                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm py-3 rounded-xl shadow-md flex items-center justify-center gap-1.5 transition"
+              >
+                <Check className="w-4 h-4 stroke-[3]" /> Bevestigen
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1167,8 +1244,12 @@ export default function App() {
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 flex items-end sm:items-center justify-center p-4">
           <div className="bg-white w-full max-w-md max-h-[90dvh] overflow-y-auto rounded-3xl p-5 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-extrabold text-base text-slate-800">Nieuw klusje maken</h3>
-              <button onClick={() => setShowAddChore(false)} className="p-1 text-slate-400 hover:text-slate-600">
+              <h3 className="font-extrabold text-base text-slate-800">Nieuw klusje toevoegen</h3>
+              <button
+                type="button"
+                onClick={() => setShowAddChore(false)}
+                className="p-1 text-slate-400 hover:text-slate-600"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1194,7 +1275,7 @@ export default function App() {
                       key={em}
                       type="button"
                       onClick={() => setNewChoreEmoji(em)}
-                      className={`w-9 h-9 rounded-xl text-lg flex items-center justify-center border-2 transition ${
+                      className={`w-10 h-10 rounded-xl text-xl flex items-center justify-center border-2 transition ${
                         newChoreEmoji === em ? 'border-indigo-500 bg-indigo-50 scale-110' : 'border-slate-100 bg-slate-50'
                       }`}
                     >
