@@ -368,6 +368,10 @@ export default function App() {
     }
   });
 
+  // Splash Screen state (gegarandeerd schermvullend op alle Android-versies)
+  const [splashPhase, setSplashPhase] = useState('visible'); // 'visible' | 'fading' | 'hidden'
+  const [logoLoadError, setLogoLoadError] = useState(false);
+
   // UI & Navigatie state
   const [activeTab, setActiveTab] = useState('chores'); // 'chores' | 'leaderboard' | 'reward' | 'settings'
   const [activeMemberId, setActiveMemberId] = useState(() => {
@@ -433,6 +437,16 @@ export default function App() {
   });
   const [firebaseInput, setFirebaseInput] = useState(firebaseUrl);
   const [syncStatus, setSyncStatus] = useState(firebaseUrl ? 'connected' : 'local'); // 'local' | 'syncing' | 'connected' | 'error'
+
+  // Splash screen vloeiend laten uitfaden na 1,5 seconde
+  useEffect(() => {
+    const fadeTimer = setTimeout(() => setSplashPhase('fading'), 1500);
+    const hideTimer = setTimeout(() => setSplashPhase('hidden'), 2000);
+    return () => {
+      clearTimeout(fadeTimer);
+      clearTimeout(hideTimer);
+    };
+  }, []);
 
   // Ververs elke minuut de tijd zodat verlopen periodes/wachttijden vanzelf weer zichtbaar worden
   useEffect(() => {
@@ -983,6 +997,54 @@ export default function App() {
 
   return (
     <div className="h-[100dvh] w-full bg-slate-50 flex flex-col relative overflow-hidden font-sans text-slate-800">
+      {/* Schermvullend KlusBazen Splash Screen (werkt betrouwbaar op elke Android-versie) */}
+      {splashPhase !== 'hidden' && (
+        <div
+          onClick={() => setSplashPhase('hidden')}
+          className={`fixed inset-0 z-[100] flex flex-col items-center justify-center p-6 transition-opacity duration-500 select-none ${
+            splashPhase === 'fading' ? 'opacity-0 pointer-events-none' : 'opacity-100'
+          }`}
+          style={{
+            background: 'radial-gradient(circle at 50% 44%, #2257A0 0%, #153E75 55%, #0B2245 100%)',
+          }}
+        >
+          {/* Gouden gloed achter het logo */}
+          <div
+            className="absolute w-80 h-80 rounded-full blur-3xl pointer-events-none"
+            style={{ background: 'radial-gradient(circle, rgba(251,191,36,0.28) 0%, rgba(251,191,36,0) 70%)' }}
+          />
+
+          {/* Decoratieve sterretjes */}
+          <Sparkles className="w-7 h-7 text-amber-300/80 absolute top-[22%] left-[18%] animate-pulse pointer-events-none" />
+          <Star className="w-5 h-5 text-amber-300/70 fill-amber-300/70 absolute top-[26%] right-[19%] animate-pulse pointer-events-none" />
+          <Sparkles className="w-5 h-5 text-white/50 absolute bottom-[28%] right-[22%] animate-pulse pointer-events-none" />
+
+          {/* Logo-kaart */}
+          <div className="relative z-10 flex flex-col items-center">
+            {!logoLoadError ? (
+              <div className="w-44 h-44 sm:w-52 sm:h-52 rounded-[2.25rem] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.45)] border-2 border-white/15 bg-[#153E75]">
+                <img
+                  src="/logo.png"
+                  alt="KlusBazen"
+                  onError={() => setLogoLoadError(true)}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ) : (
+              <div className="w-44 h-44 sm:w-52 sm:h-52 rounded-[2.25rem] shadow-[0_20px_60px_rgba(0,0,0,0.45)] border-2 border-white/20 bg-[#153E75] flex flex-col items-center justify-center gap-1">
+                <Sparkles className="w-10 h-10 text-amber-300 mb-1" />
+                <span className="text-3xl font-black tracking-tight text-amber-300 leading-none">KLUS</span>
+                <span className="text-3xl font-black tracking-tight text-white leading-none">BAZEN</span>
+              </div>
+            )}
+
+            <p className="mt-6 text-amber-200 font-extrabold text-base sm:text-lg tracking-wide text-center drop-shadow">
+              Samen klussen, samen vieren!
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Bovenste Statusbalk / Header (compact in landscape) */}
       <header
         className="bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-600 text-white px-4 sm:px-6 pb-4 landscape:pb-3 rounded-b-3xl shadow-md z-10 shrink-0"
