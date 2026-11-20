@@ -19,7 +19,11 @@ import {
   X,
   RotateCcw,
   Users,
-  Pencil
+  User,
+  Pencil,
+  Clock,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
 // ============================================================================
@@ -34,7 +38,7 @@ const AVATAR_OPTIONS = [
   // Gezin
   '👩', '👨', '👧', '👦', '👶', '👵', '👴'
 ];
-const CHORE_EMOJIS = ['🍽️', '🧹', '🛏️', '🧺', '🧽', '🐶', '🌱', '🗑️', '🚗', '📚', '🧸', '🍳', '🛒', '✨'];
+const CHORE_EMOJIS = ['🍽️', '🧹', '🛏️', '🧺', '🧽', '🐶', '🐰', '🌱', '🗑️', '🚗', '📚', '🧸', '🍳', '🛒', '✨'];
 const DEFAULT_REWARD_EMOJI = '🎁';
 
 const REWARD_PRESETS = [
@@ -52,6 +56,110 @@ const SIZE_CONFIG = {
   groot: { label: 'Groot', points: 35, color: 'bg-rose-100 text-rose-700 border-rose-200' },
 };
 
+const FREQUENCY_OPTIONS = [
+  { id: 'none', label: 'Onbeperkt', shortLabel: '' },
+  { id: 'day', label: 'Per dag', shortLabel: 'dag' },
+  { id: 'week', label: 'Per week', shortLabel: 'week' },
+  { id: 'month', label: 'Per maand', shortLabel: 'maand' },
+];
+
+// ============================================================================
+// HULPFUNCTIES VOOR PERIODES & BESCHIKBAARHEID
+// ============================================================================
+
+const getPeriodStartTimestamp = (period, now = new Date()) => {
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+
+  if (period === 'day') {
+    return start.getTime();
+  }
+  if (period === 'week') {
+    // Maandag als start van de week
+    const dayOfWeek = start.getDay(); // 0 = zondag, 1 = maandag, ...
+    const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    start.setDate(start.getDate() - diffToMonday);
+    return start.getTime();
+  }
+  if (period === 'month') {
+    start.setDate(1);
+    return start.getTime();
+  }
+  return 0;
+};
+
+const normalizeCompletionEntry = (entry) => {
+  if (typeof entry === 'number') {
+    return { ts: entry, memberId: null };
+  }
+  if (entry && typeof entry === 'object' && typeof entry.ts === 'number') {
+    return { ts: entry.ts, memberId: entry.memberId || null };
+  }
+  return null;
+};
+
+const getChoreCompletions = (chore) => {
+  if (Array.isArray(chore.completedTimestamps) && chore.completedTimestamps.length > 0) {
+    return chore.completedTimestamps.map(normalizeCompletionEntry).filter(Boolean);
+  }
+  if (chore.lastCompletedAt) {
+    return [{ ts: chore.lastCompletedAt, memberId: null }];
+  }
+  return [];
+};
+
+const getCompletionsInCurrentPeriod = (chore, memberId = null, now = new Date()) => {
+  const period = chore.frequencyPeriod || 'none';
+  if (period === 'none') return 0;
+
+  const periodStart = getPeriodStartTimestamp(period, now);
+  const taskType = chore.taskType || 'family';
+
+  return getChoreCompletions(chore).filter((entry) => {
+    if (entry.ts < periodStart) return false;
+    if (taskType === 'individual') {
+      return memberId ? entry.memberId === memberId : false;
+    }
+    return true;
+  }).length;
+};
+
+const isChoreAvailable = (chore, memberId = null, now = new Date()) => {
+  const period = chore.frequencyPeriod || 'none';
+  if (period === 'none') return true;
+
+  const maxCount = Math.max(1, Number(chore.frequencyCount) || 1);
+  return getCompletionsInCurrentPeriod(chore, memberId, now) < maxCount;
+};
+
+const getFrequencyLabel = (chore) => {
+  const period = chore.frequencyPeriod || 'none';
+  if (period === 'none') return null;
+
+  const count = Math.max(1, Number(chore.frequencyCount) || 1);
+  const opt = FREQUENCY_OPTIONS.find((o) => o.id === period);
+  return `${count}x / ${opt?.shortLabel || period}`;
+};
+
+const getNextAvailableLabel = (period) => {
+  if (period === 'day') return 'Morgen weer zichtbaar';
+  if (period === 'week') return 'Maandag weer zichtbaar';
+  if (period === 'month') return 'Volgende maand weer zichtbaar';
+  return '';
+};
+
+const normalizeChores = (chores) => {
+  if (!Array.isArray(chores)) return [];
+  return chores.map((c) => ({
+    ...c,
+    taskType: c.taskType === 'individual' ? 'individual' : 'family',
+    frequencyPeriod: c.frequencyPeriod || 'none',
+    frequencyCount: Math.max(1, Number(c.frequencyCount) || 1),
+    lastCompletedAt: c.lastCompletedAt || null,
+    completedTimestamps: getChoreCompletions(c),
+  }));
+};
+
 // Standaard startdata zodat het gezin de app direct kan testen
 const getInitialState = () => {
   const nextWeek = new Date();
@@ -66,13 +174,13 @@ const getInitialState = () => {
       { id: 'm4', name: 'Lucas', avatar: '🦁', points: 30 },
     ],
     chores: [
-      { id: 'c1', title: 'Tafel dekken & afruimen', emoji: '🍽️', size: 'klein', points: 10 },
-      { id: 'c2', title: 'Eigen bed opmaken', emoji: '🛏️', size: 'klein', points: 10 },
-      { id: 'c3', title: 'Vaatwasser uitruimen', emoji: '✨', size: 'middel', points: 20 },
-      { id: 'c4', title: 'Woonkamer stofzuigen', emoji: '🧹', size: 'middel', points: 20 },
-      { id: 'c5', title: 'Was opvouwen & opruimen', emoji: '🧺', size: 'middel', points: 20 },
-      { id: 'c6', title: 'Badkamer schoonmaken', emoji: '🧽', size: 'groot', points: 35 },
-      { id: 'c7', title: 'Auto wassen', emoji: '🚗', size: 'groot', points: 35 },
+      { id: 'c1', title: 'Tafel dekken & afruimen', emoji: '🍽️', size: 'klein', points: 10, taskType: 'family', frequencyPeriod: 'none', frequencyCount: 1, lastCompletedAt: null, completedTimestamps: [] },
+      { id: 'c2', title: 'Eigen bed opmaken', emoji: '🛏️', size: 'klein', points: 10, taskType: 'individual', frequencyPeriod: 'day', frequencyCount: 1, lastCompletedAt: null, completedTimestamps: [] },
+      { id: 'c3', title: 'Vaatwasser uitruimen', emoji: '✨', size: 'middel', points: 20, taskType: 'family', frequencyPeriod: 'none', frequencyCount: 1, lastCompletedAt: null, completedTimestamps: [] },
+      { id: 'c4', title: 'Woonkamer stofzuigen', emoji: '🧹', size: 'middel', points: 20, taskType: 'family', frequencyPeriod: 'week', frequencyCount: 2, lastCompletedAt: null, completedTimestamps: [] },
+      { id: 'c5', title: 'Was opvouwen & opruimen', emoji: '🧺', size: 'middel', points: 20, taskType: 'family', frequencyPeriod: 'none', frequencyCount: 1, lastCompletedAt: null, completedTimestamps: [] },
+      { id: 'c6', title: 'Badkamer schoonmaken', emoji: '🧽', size: 'groot', points: 35, taskType: 'family', frequencyPeriod: 'week', frequencyCount: 1, lastCompletedAt: null, completedTimestamps: [] },
+      { id: 'c7', title: 'Auto wassen', emoji: '🚗', size: 'groot', points: 35, taskType: 'family', frequencyPeriod: 'month', frequencyCount: 1, lastCompletedAt: null, completedTimestamps: [] },
     ],
     reward: {
       title: 'Samen uit eten bij de pizzeria',
@@ -81,9 +189,9 @@ const getInitialState = () => {
       endDate: endDateStr,
     },
     history: [
-      { id: 'h1', memberId: 'm3', memberName: 'Emma', memberAvatar: '🦄', choreTitle: 'Vaatwasser uitruimen', points: 20, timestamp: Date.now() - 3600000 * 2 },
-      { id: 'h2', memberId: 'm1', memberName: 'Mama', memberAvatar: '🦸‍♀️', choreTitle: 'Was opvouwen & opruimen', points: 20, timestamp: Date.now() - 3600000 * 5 },
-      { id: 'h3', memberId: 'm4', memberName: 'Lucas', memberAvatar: '🦁', choreTitle: 'Tafel dekken & afruimen', points: 10, timestamp: Date.now() - 3600000 * 8 },
+      { id: 'h1', choreId: 'c3', memberId: 'm3', memberName: 'Emma', memberAvatar: '🦄', choreTitle: 'Vaatwasser uitruimen', points: 20, timestamp: Date.now() - 3600000 * 2 },
+      { id: 'h2', choreId: 'c5', memberId: 'm1', memberName: 'Mama', memberAvatar: '🦸‍♀️', choreTitle: 'Was opvouwen & opruimen', points: 20, timestamp: Date.now() - 3600000 * 5 },
+      { id: 'h3', choreId: 'c1', memberId: 'm4', memberName: 'Lucas', memberAvatar: '🦁', choreTitle: 'Tafel dekken & afruimen', points: 10, timestamp: Date.now() - 3600000 * 8 },
     ],
     pastRewards: [
       { id: 'pr1', title: 'Grote spelletjesavond met snacks', emoji: '🎲', date: 'Vorige week', totalPoints: 165 }
@@ -100,7 +208,14 @@ export default function App() {
   const [data, setData] = useState(() => {
     try {
       const saved = localStorage.getItem('klusjes_kampioen_data_v1');
-      return saved ? JSON.parse(saved) : getInitialState();
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          ...parsed,
+          chores: normalizeChores(parsed.chores),
+        };
+      }
+      return getInitialState();
     } catch (e) {
       return getInitialState();
     }
@@ -121,9 +236,12 @@ export default function App() {
   });
   const [toast, setToast] = useState(null);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [showCompletedChores, setShowCompletedChores] = useState(false);
+  const [nowTick, setNowTick] = useState(() => Date.now());
 
   // Modals state
-  const [showAddChore, setShowAddChore] = useState(false);
+  const [showChoreModal, setShowChoreModal] = useState(false);
+  const [editingChore, setEditingChore] = useState(null);
   const [showAddMember, setShowAddMember] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
   const [confirmDeleteMember, setConfirmDeleteMember] = useState(false);
@@ -132,10 +250,15 @@ export default function App() {
   const [editMemberName, setEditMemberName] = useState('');
   const [editMemberAvatar, setEditMemberAvatar] = useState('🐼');
 
-  // Formulier state: Nieuw klusje & nieuw gezinslid
-  const [newChoreTitle, setNewChoreTitle] = useState('');
-  const [newChoreEmoji, setNewChoreEmoji] = useState('🧹');
-  const [newChoreSize, setNewChoreSize] = useState('klein');
+  // Formulier state: Klusje toevoegen / bewerken
+  const [choreTitleInput, setChoreTitleInput] = useState('');
+  const [choreEmojiInput, setChoreEmojiInput] = useState('🧹');
+  const [choreSizeInput, setChoreSizeInput] = useState('klein');
+  const [choreTaskTypeInput, setChoreTaskTypeInput] = useState('family');
+  const [choreFreqPeriodInput, setChoreFreqPeriodInput] = useState('none');
+  const [choreFreqCountInput, setChoreFreqCountInput] = useState(1);
+
+  // Formulier state: Nieuw gezinslid
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberAvatar, setNewMemberAvatar] = useState('🐼');
 
@@ -145,7 +268,7 @@ export default function App() {
   const [editRewardTarget, setEditRewardTarget] = useState(data.reward.targetPoints);
   const [editRewardDate, setEditRewardDate] = useState(data.reward.endDate);
 
-  // Firebase Synchronisatie state (via Realtime Database REST API - geen extra packages nodig)
+  // Firebase Synchronisatie state (via Realtime Database REST API)
   const [firebaseUrl, setFirebaseUrl] = useState(() => {
     try {
       return localStorage.getItem('klusjes_firebase_url') || '';
@@ -155,6 +278,12 @@ export default function App() {
   });
   const [firebaseInput, setFirebaseInput] = useState(firebaseUrl);
   const [syncStatus, setSyncStatus] = useState(firebaseUrl ? 'connected' : 'local'); // 'local' | 'syncing' | 'connected' | 'error'
+
+  // Ververs elke minuut de tijd zodat verlopen periodes (bijv. na middernacht) vanzelf weer zichtbaar worden
+  useEffect(() => {
+    const timer = setInterval(() => setNowTick(Date.now()), 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Zorg dat activeMemberId altijd geldig blijft
   useEffect(() => {
@@ -234,10 +363,10 @@ export default function App() {
       if (!res.ok) throw new Error('Firebase leesfout');
       const remoteData = await res.json();
       if (remoteData && typeof remoteData === 'object') {
-        // Firebase laat lege arrays weg uit JSON; normaliseer ze zodat verwijderde items echt wegblijven
+        // Firebase laat lege arrays weg uit JSON; normaliseer ze zodat verwijderde items & timestamps kloppen
         const normalized = {
           members: Array.isArray(remoteData.members) ? remoteData.members : [],
-          chores: Array.isArray(remoteData.chores) ? remoteData.chores : [],
+          chores: normalizeChores(remoteData.chores),
           reward: remoteData.reward || getInitialState().reward,
           history: Array.isArray(remoteData.history) ? remoteData.history : [],
           pastRewards: Array.isArray(remoteData.pastRewards) ? remoteData.pastRewards : [],
@@ -286,12 +415,17 @@ export default function App() {
   // BEREKENINGEN
   // ============================================================================
 
+  const nowDate = new Date(nowTick);
   const totalPoints = data.members.reduce((sum, m) => sum + (m.points || 0), 0);
   const targetPoints = Math.max(1, Number(data.reward.targetPoints) || 100);
   const progressPercent = Math.min(100, Math.round((totalPoints / targetPoints) * 100));
   const isGoalReached = totalPoints >= targetPoints;
 
   const activeMember = data.members.find((m) => m.id === activeMemberId) || data.members[0];
+
+  // Splits klusjes in beschikbaar vs. al gedaan in de huidige periode (rekening houdend met gezinstaak vs. individueel)
+  const availableChores = data.chores.filter((c) => isChoreAvailable(c, activeMember?.id, nowDate));
+  const completedPeriodChores = data.chores.filter((c) => !isChoreAvailable(c, activeMember?.id, nowDate));
 
   // Dagen over berekenen
   const getDaysRemaining = () => {
@@ -312,6 +446,81 @@ export default function App() {
   // ACTIES (KLUSJES, LEDEN, BELONING)
   // ============================================================================
 
+  const openAddChoreModal = () => {
+    setEditingChore(null);
+    setChoreTitleInput('');
+    setChoreEmojiInput('🧹');
+    setChoreSizeInput('klein');
+    setChoreTaskTypeInput('family');
+    setChoreFreqPeriodInput('none');
+    setChoreFreqCountInput(1);
+    setShowChoreModal(true);
+  };
+
+  const openEditChoreModal = (chore) => {
+    setEditingChore(chore);
+    setChoreTitleInput(chore.title);
+    setChoreEmojiInput(chore.emoji || '🧹');
+    setChoreSizeInput(chore.size || 'klein');
+    setChoreTaskTypeInput(chore.taskType === 'individual' ? 'individual' : 'family');
+    setChoreFreqPeriodInput(chore.frequencyPeriod || 'none');
+    setChoreFreqCountInput(Math.max(1, Number(chore.frequencyCount) || 1));
+    setShowChoreModal(true);
+  };
+
+  const handleSaveChore = (e) => {
+    e.preventDefault();
+    if (!choreTitleInput.trim()) return;
+
+    const cleanTaskType = choreTaskTypeInput === 'individual' ? 'individual' : 'family';
+    const cleanPeriod = choreFreqPeriodInput || 'none';
+    const cleanCount = cleanPeriod === 'none' ? 1 : Math.max(1, Math.min(20, Number(choreFreqCountInput) || 1));
+    const points = (SIZE_CONFIG[choreSizeInput] || SIZE_CONFIG.klein).points;
+
+    if (editingChore) {
+      updateData((prev) => ({
+        ...prev,
+        chores: prev.chores.map((c) =>
+          c.id === editingChore.id
+            ? {
+                ...c,
+                title: choreTitleInput.trim(),
+                emoji: choreEmojiInput,
+                size: choreSizeInput,
+                points,
+                taskType: cleanTaskType,
+                frequencyPeriod: cleanPeriod,
+                frequencyCount: cleanCount,
+              }
+            : c
+        ),
+      }));
+      showToast('Klusje bijgewerkt!', choreEmojiInput);
+    } else {
+      const newChore = {
+        id: `c_${Date.now()}`,
+        title: choreTitleInput.trim(),
+        emoji: choreEmojiInput,
+        size: choreSizeInput,
+        points,
+        taskType: cleanTaskType,
+        frequencyPeriod: cleanPeriod,
+        frequencyCount: cleanCount,
+        lastCompletedAt: null,
+        completedTimestamps: [],
+      };
+
+      updateData((prev) => ({
+        ...prev,
+        chores: [newChore, ...prev.chores],
+      }));
+      showToast('Nieuw klusje toegevoegd!', newChore.emoji);
+    }
+
+    setShowChoreModal(false);
+    setEditingChore(null);
+  };
+
   const handleRequestCompleteChore = (chore) => {
     if (!activeMember) {
       showToast('Voeg eerst een gezinslid toe!', '👨‍👩‍👧‍👦');
@@ -328,6 +537,7 @@ export default function App() {
       return;
     }
 
+    const nowTs = Date.now();
     const wasGoalReached = totalPoints >= targetPoints;
     const newTotal = totalPoints + chore.points;
 
@@ -336,20 +546,36 @@ export default function App() {
       members: prev.members.map((m) =>
         m.id === activeMember.id ? { ...m, points: (m.points || 0) + chore.points } : m
       ),
+      chores: prev.chores.map((c) => {
+        if (c.id !== chore.id) return c;
+        // Bewaar uitvoeringen van de afgelopen 35 dagen inclusief welk gezinslid het deed
+        const cutoff = nowTs - 35 * 24 * 60 * 60 * 1000;
+        const recentCompletions = [
+          ...getChoreCompletions(c).filter((entry) => entry.ts >= cutoff),
+          { ts: nowTs, memberId: activeMember.id },
+        ];
+        return {
+          ...c,
+          lastCompletedAt: nowTs,
+          completedTimestamps: recentCompletions,
+        };
+      }),
       history: [
         {
-          id: `h_${Date.now()}`,
+          id: `h_${nowTs}`,
+          choreId: chore.id,
           memberId: activeMember.id,
           memberName: activeMember.name,
           memberAvatar: activeMember.avatar,
           choreTitle: chore.title,
           points: chore.points,
-          timestamp: Date.now(),
+          timestamp: nowTs,
         },
         ...(prev.history || []).slice(0, 29), // Bewaar laatste 30 activiteiten
       ],
     }));
 
+    setNowTick(nowTs);
     setConfirmChore(null);
     showToast(`+${chore.points} punten voor ${activeMember.name}!`, chore.emoji);
 
@@ -357,29 +583,6 @@ export default function App() {
     if (!wasGoalReached && newTotal >= targetPoints) {
       setShowCelebration(true);
     }
-  };
-
-  const handleAddChore = (e) => {
-    e.preventDefault();
-    if (!newChoreTitle.trim()) return;
-
-    const newChore = {
-      id: `c_${Date.now()}`,
-      title: newChoreTitle.trim(),
-      emoji: newChoreEmoji,
-      size: newChoreSize,
-      points: SIZE_CONFIG[newChoreSize].points,
-    };
-
-    updateData((prev) => ({
-      ...prev,
-      chores: [newChore, ...prev.chores],
-    }));
-
-    setNewChoreTitle('');
-    setNewChoreSize('klein');
-    setShowAddChore(false);
-    showToast('Nieuw klusje toegevoegd!', newChore.emoji);
   };
 
   const handleDeleteChore = (id) => {
@@ -398,8 +601,39 @@ export default function App() {
           ? { ...m, points: Math.max(0, (m.points || 0) - (item.points || 0)) }
           : m
       ),
+      // Verwijder de uitvoeringstijd ook weer van het klusje zodat het direct weer zichtbaar wordt
+      chores: prev.chores.map((c) => {
+        const isMatch = item.choreId ? c.id === item.choreId : c.title === item.choreTitle;
+        if (!isMatch) return c;
+        const completions = getChoreCompletions(c);
+        const updatedCompletions = [...completions];
+        const exactIdx = updatedCompletions.findIndex(
+          (entry) => entry.ts === item.timestamp && (!entry.memberId || entry.memberId === item.memberId)
+        );
+        if (exactIdx !== -1) {
+          updatedCompletions.splice(exactIdx, 1);
+        } else {
+          // Fallback als het een ouder history-item zonder exacte match was
+          const fallbackIdx = [...updatedCompletions]
+            .reverse()
+            .findIndex((entry) => !entry.memberId || entry.memberId === item.memberId);
+          if (fallbackIdx !== -1) {
+            updatedCompletions.splice(updatedCompletions.length - 1 - fallbackIdx, 1);
+          }
+        }
+        const newLast =
+          updatedCompletions.length > 0
+            ? Math.max(...updatedCompletions.map((entry) => entry.ts))
+            : null;
+        return {
+          ...c,
+          lastCompletedAt: newLast,
+          completedTimestamps: updatedCompletions,
+        };
+      }),
       history: (prev.history || []).filter((h) => h.id !== item.id),
     }));
+    setNowTick(Date.now());
     showToast(`${item.choreTitle} ongedaan gemaakt (-${item.points} pnt)`, '↩️');
   };
 
@@ -733,7 +967,7 @@ export default function App() {
                     Kies een klusje voor {activeMember?.name || '...'}
                   </h3>
                   <button
-                    onClick={() => setShowAddChore(true)}
+                    onClick={openAddChoreModal}
                     className="text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-full flex items-center gap-1 shadow-sm transition"
                   >
                     <Plus className="w-3.5 h-3.5" /> Nieuw klusje
@@ -744,43 +978,77 @@ export default function App() {
                   <div className="bg-white rounded-3xl p-6 text-center border border-slate-100 text-slate-400 text-sm">
                     Nog geen klusjes! Voeg je eerste klusje toe.
                   </div>
+                ) : availableChores.length === 0 ? (
+                  <div className="bg-white rounded-3xl p-6 text-center border border-emerald-100 space-y-1">
+                    <div className="text-3xl">🎉</div>
+                    <p className="text-sm font-bold text-slate-700">
+                      Alle klusjes voor {activeMember?.name || 'deze periode'} zijn al gedaan!
+                    </p>
+                    <p className="text-xs text-slate-400">Ze verschijnen automatisch weer zodra de volgende periode begint.</p>
+                  </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    {data.chores.map((chore) => {
+                    {availableChores.map((chore) => {
                       const sizeCfg = SIZE_CONFIG[chore.size] || SIZE_CONFIG.klein;
+                      const freqLabel = getFrequencyLabel(chore);
+                      const isIndividual = chore.taskType === 'individual';
+                      const doneCount = getCompletionsInCurrentPeriod(chore, activeMember?.id, nowDate);
+                      const maxCount = Math.max(1, Number(chore.frequencyCount) || 1);
+
                       return (
                         <div
                           key={chore.id}
-                          className="bg-white rounded-2xl p-3 shadow-sm border border-slate-100 flex items-center justify-between gap-2.5"
+                          className="bg-white rounded-2xl p-3 shadow-sm border border-slate-100 flex items-center justify-between gap-2"
                         >
-                          <div className="flex items-center gap-3 min-w-0">
+                          <div className="flex items-center gap-2.5 min-w-0">
                             <div className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-2xl shrink-0">
                               {chore.emoji}
                             </div>
                             <div className="min-w-0">
                               <h4 className="font-bold text-sm text-slate-800 truncate">{chore.title}</h4>
-                              <div className="flex items-center gap-1.5 mt-1">
+                              <div className="flex flex-wrap items-center gap-1.5 mt-1">
                                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${sizeCfg.color}`}>
                                   {sizeCfg.label}
                                 </span>
                                 <span className="text-xs font-extrabold text-amber-600 flex items-center gap-0.5">
                                   <Star className="w-3 h-3 fill-amber-400 text-amber-400" /> +{chore.points}
                                 </span>
+                                {freqLabel && (
+                                  <span
+                                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5 ${
+                                      isIndividual
+                                        ? 'text-violet-700 bg-violet-50'
+                                        : 'text-indigo-600 bg-indigo-50'
+                                    }`}
+                                    title={isIndividual ? 'Individuele taak (per gezinslid)' : 'Gezinstaak (samen)'}
+                                  >
+                                    {isIndividual ? <User className="w-2.5 h-2.5" /> : <Users className="w-2.5 h-2.5" />}
+                                    {maxCount > 1 ? `${doneCount}/${maxCount} • ${freqLabel}` : freqLabel}
+                                    {isIndividual ? ' • p.p.' : ''}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-1.5 shrink-0">
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              onClick={() => openEditChoreModal(chore)}
+                              className="p-1.5 text-slate-300 hover:text-indigo-600 transition rounded-xl"
+                              title="Klusje bewerken"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
                             <button
                               onClick={() => handleDeleteChore(chore.id)}
-                              className="p-2 text-slate-300 hover:text-rose-500 transition rounded-xl"
+                              className="p-1.5 text-slate-300 hover:text-rose-500 transition rounded-xl"
                               title="Klusje verwijderen"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => handleRequestCompleteChore(chore)}
-                              className="bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl flex items-center gap-1 shadow-sm transition"
+                              className="bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-bold text-xs px-3 py-2.5 rounded-xl flex items-center gap-1 shadow-sm transition"
                             >
                               <Check className="w-4 h-4 stroke-[3]" /> Gedaan
                             </button>
@@ -788,6 +1056,69 @@ export default function App() {
                         </div>
                       );
                     })}
+                  </div>
+                )}
+
+                {/* Ingeklapt overzicht van klusjes die voor deze periode al gedaan zijn (voor beheer/inzicht) */}
+                {completedPeriodChores.length > 0 && (
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowCompletedChores((v) => !v)}
+                      className="w-full flex items-center justify-between bg-slate-100/80 hover:bg-slate-200/70 text-slate-500 text-xs font-bold px-3.5 py-2.5 rounded-2xl transition"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5" />
+                        Al gedaan in deze periode ({completedPeriodChores.length})
+                      </span>
+                      {showCompletedChores ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </button>
+
+                    {showCompletedChores && (
+                      <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {completedPeriodChores.map((chore) => {
+                          const isIndividual = chore.taskType === 'individual';
+                          return (
+                            <div
+                              key={chore.id}
+                              className="bg-slate-100/70 rounded-2xl p-3 border border-slate-200/70 flex items-center justify-between gap-2 opacity-80"
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-lg shrink-0 grayscale">
+                                  {chore.emoji}
+                                </div>
+                                <div className="min-w-0">
+                                  <h4 className="font-bold text-xs text-slate-600 truncate line-through">{chore.title}</h4>
+                                  <p className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
+                                    <Clock className="w-3 h-3 shrink-0" />
+                                    <span className="truncate">
+                                      {getNextAvailableLabel(chore.frequencyPeriod)}
+                                      {isIndividual && activeMember ? ` (voor ${activeMember.name})` : ''}
+                                    </span>
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  onClick={() => openEditChoreModal(chore)}
+                                  className="p-1.5 text-slate-400 hover:text-indigo-600 transition rounded-xl"
+                                  title="Klusje bewerken"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteChore(chore.id)}
+                                  className="p-1.5 text-slate-400 hover:text-rose-500 transition rounded-xl"
+                                  title="Klusje verwijderen"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 )}
               </section>
@@ -1239,31 +1570,36 @@ export default function App() {
       )}
 
       {/* ============================================================== */}
-      {/* MODAL: NIEUW KLUSJE TOEVOEGEN                                  */}
+      {/* MODAL: KLUSJE TOEVOEGEN / BEWERKEN                             */}
       {/* ============================================================== */}
-      {showAddChore && (
+      {showChoreModal && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 flex items-end sm:items-center justify-center p-4">
           <div className="bg-white w-full max-w-md max-h-[90dvh] overflow-y-auto rounded-3xl p-5 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-extrabold text-base text-slate-800">Nieuw klusje toevoegen</h3>
+              <h3 className="font-extrabold text-base text-slate-800">
+                {editingChore ? 'Klusje bewerken' : 'Nieuw klusje toevoegen'}
+              </h3>
               <button
                 type="button"
-                onClick={() => setShowAddChore(false)}
+                onClick={() => {
+                  setShowChoreModal(false);
+                  setEditingChore(null);
+                }}
                 className="p-1 text-slate-400 hover:text-slate-600"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleAddChore} className="space-y-4">
+            <form onSubmit={handleSaveChore} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-600 mb-1">Naam van het klusje</label>
                 <input
                   type="text"
                   required
-                  value={newChoreTitle}
-                  onChange={(e) => setNewChoreTitle(e.target.value)}
-                  placeholder="Bijv. Hond uitlaten of Kamer opruimen"
+                  value={choreTitleInput}
+                  onChange={(e) => setChoreTitleInput(e.target.value)}
+                  placeholder="Bijv. Konijnen WC verschonen of Eigen bed opmaken"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
@@ -1275,9 +1611,9 @@ export default function App() {
                     <button
                       key={em}
                       type="button"
-                      onClick={() => setNewChoreEmoji(em)}
+                      onClick={() => setChoreEmojiInput(em)}
                       className={`w-10 h-10 rounded-xl text-xl flex items-center justify-center border-2 transition ${
-                        newChoreEmoji === em ? 'border-indigo-500 bg-indigo-50 scale-110' : 'border-slate-100 bg-slate-50'
+                        choreEmojiInput === em ? 'border-indigo-500 bg-indigo-50 scale-110' : 'border-slate-100 bg-slate-50'
                       }`}
                     >
                       {em}
@@ -1293,9 +1629,9 @@ export default function App() {
                     <button
                       key={key}
                       type="button"
-                      onClick={() => setNewChoreSize(key)}
+                      onClick={() => setChoreSizeInput(key)}
                       className={`p-2.5 rounded-xl border-2 text-center transition ${
-                        newChoreSize === key
+                        choreSizeInput === key
                           ? 'border-indigo-600 bg-indigo-50'
                           : 'border-slate-100 bg-slate-50'
                       }`}
@@ -1307,11 +1643,121 @@ export default function App() {
                 </div>
               </div>
 
+              {/* Frequentie & Type taak */}
+              <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1.5 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-indigo-500" /> Hoe vaak mag dit klusje?
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                    {FREQUENCY_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setChoreFreqPeriodInput(opt.id)}
+                        className={`py-2 px-2 rounded-xl border-2 text-xs font-bold transition ${
+                          choreFreqPeriodInput === opt.id
+                            ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
+                            : 'border-slate-200/70 bg-white text-slate-600'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {choreFreqPeriodInput !== 'none' && (
+                  <>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-xs font-semibold text-slate-600">
+                        Aantal keer per {FREQUENCY_OPTIONS.find((o) => o.id === choreFreqPeriodInput)?.shortLabel}:
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setChoreFreqCountInput((c) => Math.max(1, Number(c) - 1))}
+                          className="w-8 h-8 rounded-lg bg-white border border-slate-200 font-bold text-slate-700 hover:bg-slate-100"
+                        >
+                          -
+                        </button>
+                        <input
+                          type="number"
+                          min="1"
+                          max="20"
+                          value={choreFreqCountInput}
+                          onChange={(e) => setChoreFreqCountInput(Math.max(1, Number(e.target.value) || 1))}
+                          className="w-12 text-center bg-white border border-slate-200 rounded-lg py-1 text-sm font-extrabold text-slate-800"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setChoreFreqCountInput((c) => Math.min(20, Number(c) + 1))}
+                          className="w-8 h-8 rounded-lg bg-white border border-slate-200 font-bold text-slate-700 hover:bg-slate-100"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Gezinstaak vs. Individuele taak */}
+                    <div className="pt-1 border-t border-slate-200/70">
+                      <label className="block text-xs font-bold text-slate-600 mb-1.5">
+                        Voor wie geldt deze limiet?
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setChoreTaskTypeInput('family')}
+                          className={`p-2.5 rounded-xl border-2 text-left transition flex items-start gap-2 ${
+                            choreTaskTypeInput === 'family'
+                              ? 'border-indigo-600 bg-indigo-50 text-indigo-800'
+                              : 'border-slate-200/70 bg-white text-slate-600'
+                          }`}
+                        >
+                          <Users className="w-4 h-4 mt-0.5 shrink-0" />
+                          <div>
+                            <div className="text-xs font-bold leading-tight">Gezinstaak</div>
+                            <div className="text-[10px] opacity-80 mt-0.5">Klaar voor iedereen</div>
+                          </div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setChoreTaskTypeInput('individual')}
+                          className={`p-2.5 rounded-xl border-2 text-left transition flex items-start gap-2 ${
+                            choreTaskTypeInput === 'individual'
+                              ? 'border-violet-600 bg-violet-50 text-violet-800'
+                              : 'border-slate-200/70 bg-white text-slate-600'
+                          }`}
+                        >
+                          <User className="w-4 h-4 mt-0.5 shrink-0" />
+                          <div>
+                            <div className="text-xs font-bold leading-tight">Individueel</div>
+                            <div className="text-[10px] opacity-80 mt-0.5">Per gezinslid apart</div>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <p className="text-[11px] text-slate-400">
+                  {choreFreqPeriodInput === 'none'
+                    ? 'Dit klusje blijft altijd zichtbaar en mag zo vaak als nodig gedaan worden.'
+                    : choreTaskTypeInput === 'individual'
+                    ? `Ieder gezinslid kan dit klusje ${choreFreqCountInput}x per ${
+                        FREQUENCY_OPTIONS.find((o) => o.id === choreFreqPeriodInput)?.shortLabel
+                      } doen.`
+                    : `Zodra iemand dit ${choreFreqCountInput}x heeft gedaan, verdwijnt het voor het hele gezin tot de volgende ${
+                        FREQUENCY_OPTIONS.find((o) => o.id === choreFreqPeriodInput)?.shortLabel
+                      }.`}
+                </p>
+              </div>
+
               <button
                 type="submit"
                 className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm py-3 rounded-xl shadow-md"
               >
-                Klusje toevoegen
+                {editingChore ? 'Wijzigingen opslaan' : 'Klusje toevoegen'}
               </button>
             </form>
           </div>
