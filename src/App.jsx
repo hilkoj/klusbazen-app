@@ -46,6 +46,7 @@ const REWARD_PRESETS = [
 ];
 
 const SIZE_CONFIG = {
+  mini: { label: 'Mini', points: 5, color: 'bg-sky-100 text-sky-700 border-sky-200' },
   klein: { label: 'Klein', points: 10, color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
   middel: { label: 'Middel', points: 20, color: 'bg-amber-100 text-amber-700 border-amber-200' },
   groot: { label: 'Groot', points: 35, color: 'bg-rose-100 text-rose-700 border-rose-200' },
@@ -1287,7 +1288,7 @@ export default function App() {
 
               <div>
                 <label className="block text-xs font-bold text-slate-600 mb-1.5">Hoe groot is het klusje?</label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {Object.entries(SIZE_CONFIG).map(([key, cfg]) => (
                     <button
                       key={key}
