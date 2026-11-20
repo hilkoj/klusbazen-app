@@ -59,13 +59,13 @@ jobs:
 
           npm run build
 
-      - name: 5. Android-project, icoon, Android 12+ splash thema & versienummer genereren
+      - name: 5. Android-project, icoon, naadloos splash thema & versienummer genereren
         run: |
           npx cap add android
 
           SOURCE_LOGO=$(find assets -maxdepth 1 -type f \( -iname "icon-only.*" -o -iname "logo.*" -o -iname "icon.*" \) | head -n 1)
 
-          # Maak alle bestanden die @capacitor/assets nodig heeft voor Adaptive Icons + oudere Android splash screens
+          # Maak alle bestanden die @capacitor/assets nodig heeft voor Adaptive Icons + effen donkerblauwe fallback splash
           SOURCE_LOGO="$SOURCE_LOGO" node << 'EOF'
             const sharp = require('sharp');
             const src = process.env.SOURCE_LOGO;
@@ -97,11 +97,10 @@ jobs:
                 .png()
                 .toFile('assets/icon-background.png');
 
-              // 4. Fallback Splash Screen voor oudere Android-versies (< Android 12)
+              // 4. Effen donkerblauwe fallback splash (geen dubbel/wazig logo vóór het echte splash screen)
               await sharp({
                 create: { width: 2732, height: 2732, channels: 4, background: '#153E75' }
               })
-                .composite([{ input: fgLogo, gravity: 'center' }])
                 .png()
                 .toFile('assets/splash.png.tmp');
 
@@ -127,7 +126,17 @@ jobs:
             exit 1
           fi
 
-          # Android 12+ Splash Screen thema instellen voor zowel lichte als donkere modus (voorkomt grijs scherm!)
+          # Transparant 1dp-icoon aanmaken zodat Android 12+ geen eerste (wazig) logo toont vóór ons eigen splash screen
+          mkdir -p android/app/src/main/res/drawable
+          cat << 'XML' > android/app/src/main/res/drawable/transparent_splash_icon.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android">
+              <solid android:color="@android:color/transparent" />
+              <size android:width="1dp" android:height="1dp" />
+          </shape>
+          XML
+
+          # Android 12+ Splash Screen thema instellen voor zowel lichte als donkere modus (effen #153E75, geen dubbel logo)
           for DIR in values-v31 values-night-v31; do
             mkdir -p "android/app/src/main/res/$DIR"
             cat << 'XML' > "android/app/src/main/res/$DIR/styles.xml"
@@ -136,8 +145,8 @@ jobs:
               <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
                   <item name="windowSplashScreenBackground">#153E75</item>
                   <item name="android:windowSplashScreenBackground">#153E75</item>
-                  <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
-                  <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
+                  <item name="windowSplashScreenAnimatedIcon">@drawable/transparent_splash_icon</item>
+                  <item name="android:windowSplashScreenAnimatedIcon">@drawable/transparent_splash_icon</item>
                   <item name="android:windowBackground">#153E75</item>
                   <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
               </style>
@@ -145,7 +154,7 @@ jobs:
           XML
           done
 
-          echo "✅ Adaptive Icon & Android 12+ Splash Thema (licht + donker) zijn succesvol gegenereerd!"
+          echo "✅ Adaptive Icon & naadloos Android 12+ Splash Thema (zonder dubbel logo) zijn succesvol gegenereerd!"
 
           npx cap sync android
           sed -i "s/versionCode 1/versionCode ${{ github.run_number }}/g" android/app/build.gradle
