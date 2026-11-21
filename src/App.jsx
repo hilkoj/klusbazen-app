@@ -52,10 +52,10 @@ const REWARD_PRESETS = [
 ];
 
 const SIZE_CONFIG = {
-  mini: { label: 'Mini', points: 5, color: 'bg-sky-100 text-sky-700 border-sky-200' },
-  klein: { label: 'Klein', points: 10, color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-  middel: { label: 'Middel', points: 20, color: 'bg-amber-100 text-amber-700 border-amber-200' },
-  groot: { label: 'Groot', points: 35, color: 'bg-rose-100 text-rose-700 border-rose-200' },
+  mini: { label: 'Mini', points: 5, color: 'bg-sky-100 text-sky-800 border-sky-200' },
+  klein: { label: 'Klein', points: 10, color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+  middel: { label: 'Middel', points: 20, color: 'bg-amber-100 text-amber-800 border-amber-200' },
+  groot: { label: 'Groot', points: 35, color: 'bg-orange-100 text-orange-800 border-orange-200' },
 };
 
 const FREQUENCY_OPTIONS = [
@@ -998,11 +998,11 @@ export default function App() {
   };
 
   // ============================================================================
-  // RENDERING (Schermvullend & Responsive voor Portrait + Landscape)
+  // RENDERING (KlusBazen Huisstijl: Koningsblauw #153E75 & Warm Goud)
   // ============================================================================
 
   return (
-    <div className="h-[100dvh] w-full bg-slate-50 flex flex-col relative overflow-hidden font-sans text-slate-800">
+    <div className="h-[100dvh] w-full bg-[#F3F6FB] flex flex-col relative overflow-hidden font-sans text-slate-800">
       {/* Fallback Splash Screen (voor omgevingen zonder #initial-splash in index.html) */}
       {splashPhase !== 'hidden' && (
         <div
@@ -1047,25 +1047,46 @@ export default function App() {
         </div>
       )}
 
-      {/* Bovenste Statusbalk / Header (compact in landscape) */}
+      {/* Bovenste Statusbalk / Header in KlusBazen Koningsblauw & Goud */}
       <header
-        className="bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-600 text-white px-4 sm:px-6 pb-4 landscape:pb-3 rounded-b-3xl shadow-md z-10 shrink-0"
+        className="relative overflow-hidden text-white px-4 sm:px-6 pb-4 landscape:pb-3 rounded-b-3xl shadow-[0_8px_24px_rgba(11,34,69,0.22)] z-10 shrink-0"
         style={{
+          background: 'linear-gradient(145deg, #2257A0 0%, #153E75 55%, #0E2B54 100%)',
           paddingTop: 'max(0.85rem, env(safe-area-inset-top))',
           paddingLeft: 'max(1rem, env(safe-area-inset-left))',
           paddingRight: 'max(1rem, env(safe-area-inset-right))',
         }}
       >
-        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        {/* Subtiele gouden gloed in de achtergrond, passend bij het logo */}
+        <div
+          className="absolute -top-12 -right-10 w-44 h-44 rounded-full pointer-events-none opacity-30 blur-2xl"
+          style={{ background: 'radial-gradient(circle, #FBBF24 0%, transparent 70%)' }}
+        />
+
+        <div className="relative z-10 max-w-4xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           {/* App Titel + Geluid & Sync Knoppen */}
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-white/15 backdrop-blur-sm border border-white/20 flex items-center justify-center shadow-sm">
-                <Sparkles className="w-5 h-5 text-amber-300" />
-              </div>
+              {!logoLoadError ? (
+                <div className="w-10 h-10 rounded-xl overflow-hidden border border-amber-300/40 shadow-md bg-[#153E75] shrink-0">
+                  <img
+                    src="/logo.png"
+                    alt="KlusBazen"
+                    onError={() => setLogoLoadError(true)}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm border border-amber-300/35 flex items-center justify-center shadow-sm shrink-0">
+                  <Sparkles className="w-5 h-5 text-amber-300" />
+                </div>
+              )}
               <div>
-                <h1 className="text-lg font-black tracking-tight leading-none">KlusBazen</h1>
-                <p className="text-[11px] text-indigo-100/90 font-medium mt-0.5">Samen klussen, samen vieren!</p>
+                <h1 className="text-lg font-black tracking-tight leading-none">
+                  <span className="text-amber-300">KLUS</span>
+                  <span className="text-white">BAZEN</span>
+                </h1>
+                <p className="text-[11px] text-sky-100/90 font-semibold mt-0.5">Samen klussen, samen vieren!</p>
               </div>
             </div>
 
@@ -1074,67 +1095,67 @@ export default function App() {
               <button
                 type="button"
                 onClick={toggleSound}
-                className="flex items-center justify-center bg-white/15 hover:bg-white/25 transition p-1.5 rounded-full backdrop-blur-sm"
+                className="flex items-center justify-center bg-white/12 hover:bg-white/20 border border-white/15 transition p-1.5 rounded-full backdrop-blur-sm"
                 title={soundEnabled ? 'Geluid uitzetten' : 'Geluid aanzetten'}
               >
                 {soundEnabled ? (
                   <Volume2 className="w-4 h-4 text-amber-300" />
                 ) : (
-                  <VolumeX className="w-4 h-4 text-indigo-200/80" />
+                  <VolumeX className="w-4 h-4 text-sky-200/80" />
                 )}
               </button>
 
               <button
                 onClick={() => setActiveTab('settings')}
-                className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 transition px-2.5 py-1.5 rounded-full text-xs font-medium backdrop-blur-sm"
+                className="flex items-center gap-1.5 bg-white/12 hover:bg-white/20 border border-white/15 transition px-2.5 py-1.5 rounded-full text-xs font-semibold backdrop-blur-sm"
                 title="Firebase synchronisatie status"
               >
                 {syncStatus === 'connected' && <><Cloud className="w-3.5 h-3.5 text-emerald-300" /> <span>Live</span></>}
                 {syncStatus === 'syncing' && <><RefreshCw className="w-3.5 h-3.5 text-amber-300 animate-spin" /> <span>Sync...</span></>}
                 {syncStatus === 'error' && <><CloudOff className="w-3.5 h-3.5 text-rose-300" /> <span>Fout</span></>}
-                {syncStatus === 'local' && <><Smartphone className="w-3.5 h-3.5 text-indigo-200" /> <span>Demo</span></>}
+                {syncStatus === 'local' && <><Smartphone className="w-3.5 h-3.5 text-sky-200" /> <span>Demo</span></>}
               </button>
             </div>
           </div>
 
           {/* Gezinsbeloning Voortgangskaart */}
-          <div className="bg-white/15 backdrop-blur-md border border-white/20 rounded-2xl p-3 sm:flex-1 sm:max-w-md">
+          <div className="bg-[#0B2245]/45 backdrop-blur-md border border-white/15 rounded-2xl p-3 sm:flex-1 sm:max-w-md shadow-inner">
             <div className="flex items-center justify-between gap-2 mb-1.5">
               <div className="flex items-center gap-2.5 min-w-0">
-                <span className="text-2xl sm:text-3xl bg-white/20 w-10 h-10 flex items-center justify-center rounded-xl shrink-0">
+                <span className="text-2xl sm:text-3xl bg-white/15 border border-white/15 w-10 h-10 flex items-center justify-center rounded-xl shrink-0">
                   {data.reward.emoji || DEFAULT_REWARD_EMOJI}
                 </span>
                 <div className="min-w-0">
-                  <div className="text-[11px] uppercase tracking-wider text-indigo-100 font-semibold flex items-center gap-1">
+                  <div className="text-[11px] uppercase tracking-wider text-sky-200 font-bold flex items-center gap-1.5">
                     <span>Gezinsdoel</span>
                     {daysRemaining !== null && (
-                      <span className="bg-white/20 px-1.5 py-0.5 rounded text-[10px]">
+                      <span className="bg-amber-400/20 text-amber-200 border border-amber-300/30 px-1.5 py-0.5 rounded text-[10px]">
                         {daysRemaining > 0 ? `nog ${daysRemaining}d` : daysRemaining === 0 ? 'vandaag!' : 'verlopen'}
                       </span>
                     )}
                   </div>
-                  <h2 className="font-bold text-sm truncate">{data.reward.title}</h2>
+                  <h2 className="font-bold text-sm text-white truncate">{data.reward.title}</h2>
                 </div>
               </div>
               <div className="text-right shrink-0">
                 <div className="text-base sm:text-lg font-black text-amber-300 leading-none">
-                  {totalPoints} <span className="text-xs font-semibold text-white/80">/ {targetPoints}</span>
+                  {totalPoints} <span className="text-xs font-semibold text-sky-100/80">/ {targetPoints}</span>
                 </div>
-                <span className="text-[11px] text-indigo-100">{progressPercent}% behaald</span>
+                <span className="text-[11px] text-sky-200 font-medium">{progressPercent}% behaald</span>
               </div>
             </div>
 
             {/* Voortgangsbalk */}
-            <div className="w-full h-3 bg-black/25 rounded-full overflow-hidden p-0.5">
+            <div className="w-full h-3 bg-[#071730]/60 rounded-full overflow-hidden p-0.5 border border-white/10">
               <div
                 className={`h-full rounded-full transition-all duration-700 ease-out flex items-center justify-end pr-1 ${
                   isGoalReached
                     ? 'bg-gradient-to-r from-emerald-400 to-teal-300'
-                    : 'bg-gradient-to-r from-amber-400 to-orange-400'
+                    : 'bg-gradient-to-r from-amber-300 via-amber-400 to-orange-400'
                 }`}
                 style={{ width: `${Math.max(6, progressPercent)}%` }}
               >
-                {progressPercent >= 15 && <div className="w-1.5 h-1.5 bg-white/80 rounded-full" />}
+                {progressPercent >= 15 && <div className="w-1.5 h-1.5 bg-white/90 rounded-full" />}
               </div>
             </div>
 
@@ -1144,7 +1165,7 @@ export default function App() {
                   triggerSound('celebration');
                   setShowCelebration(true);
                 }}
-                className="mt-2 w-full bg-emerald-400 hover:bg-emerald-300 text-emerald-950 font-bold text-xs py-1.5 rounded-xl flex items-center justify-center gap-1.5 shadow-sm transition animate-pulse"
+                className="mt-2 w-full bg-amber-400 hover:bg-amber-300 text-[#0E2B54] font-extrabold text-xs py-1.5 rounded-xl flex items-center justify-center gap-1.5 shadow-sm transition animate-pulse"
               >
                 <Gift className="w-4 h-4" /> Doel behaald! Claim de beloning! 🎉
               </button>
@@ -1171,11 +1192,11 @@ export default function App() {
               <section>
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                    <Users className="w-3.5 h-3.5" /> Wie doet het klusje?
+                    <Users className="w-3.5 h-3.5 text-[#153E75]" /> Wie doet het klusje?
                   </h3>
                   <button
                     onClick={() => setShowAddMember(true)}
-                    className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 bg-indigo-50 px-2.5 py-1 rounded-full transition"
+                    className="text-xs font-bold text-[#153E75] hover:bg-[#DDE9F8] flex items-center gap-1 bg-[#E8F0FA] px-2.5 py-1 rounded-full transition"
                   >
                     <Plus className="w-3.5 h-3.5" /> Lid
                   </button>
@@ -1185,7 +1206,7 @@ export default function App() {
                   {data.members.length === 0 ? (
                     <button
                       onClick={() => setShowAddMember(true)}
-                      className="w-full bg-white border-2 border-dashed border-indigo-200 hover:border-indigo-400 rounded-2xl p-4 text-xs font-bold text-indigo-600 flex items-center justify-center gap-1.5 transition"
+                      className="w-full bg-white border-2 border-dashed border-[#153E75]/30 hover:border-[#153E75] rounded-2xl p-4 text-xs font-bold text-[#153E75] flex items-center justify-center gap-1.5 transition"
                     >
                       <Plus className="w-4 h-4" /> Voeg je eerste gezinslid toe
                     </button>
@@ -1203,23 +1224,27 @@ export default function App() {
                           }}
                           className={`relative flex flex-col items-center p-2.5 pt-3 rounded-2xl min-w-[84px] border-2 transition shrink-0 cursor-pointer ${
                             isSelected
-                              ? 'bg-indigo-50 border-indigo-500 shadow-sm scale-[1.02]'
-                              : 'bg-white border-slate-100 hover:border-slate-200'
+                              ? 'bg-[#EBF2FB] border-[#153E75] shadow-md scale-[1.02]'
+                              : 'bg-white border-slate-200/70 hover:border-[#153E75]/30'
                           }`}
                         >
                           <button
                             type="button"
                             onClick={(e) => openEditMember(member, e)}
-                            className="absolute top-1.5 right-1.5 p-1 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-white/80 transition"
+                            className="absolute top-1.5 right-1.5 p-1 rounded-lg text-slate-400 hover:text-[#153E75] hover:bg-white/80 transition"
                             title={`${member.name} bewerken of verwijderen`}
                           >
                             <Pencil className="w-3 h-3" />
                           </button>
                           <span className="text-2xl mb-1">{member.avatar}</span>
-                          <span className={`text-xs font-bold truncate max-w-[70px] ${isSelected ? 'text-indigo-700' : 'text-slate-700'}`}>
+                          <span className={`text-xs font-bold truncate max-w-[70px] ${isSelected ? 'text-[#153E75]' : 'text-slate-700'}`}>
                             {member.name}
                           </span>
-                          <span className="text-[10px] font-extrabold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full mt-0.5">
+                          <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-full mt-0.5 ${
+                            isSelected
+                              ? 'text-[#0E2B54] bg-amber-300/80'
+                              : 'text-amber-700 bg-amber-50'
+                          }`}>
                             {member.points || 0} pnt
                           </span>
                         </div>
@@ -1233,22 +1258,22 @@ export default function App() {
               <section className="space-y-2.5">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">
-                    Kies een klusje voor {activeMember?.name || '...'}
+                    Kies een klusje voor <span className="text-[#153E75]">{activeMember?.name || '...'}</span>
                   </h3>
                   <button
                     onClick={openAddChoreModal}
-                    className="text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-full flex items-center gap-1 shadow-sm transition"
+                    className="text-xs font-bold bg-[#153E75] hover:bg-[#1E4F91] text-white px-3 py-1.5 rounded-full flex items-center gap-1 shadow-sm transition"
                   >
-                    <Plus className="w-3.5 h-3.5" /> Nieuw klusje
+                    <Plus className="w-3.5 h-3.5 text-amber-300" /> Nieuw klusje
                   </button>
                 </div>
 
                 {data.chores.length === 0 ? (
-                  <div className="bg-white rounded-3xl p-6 text-center border border-slate-100 text-slate-400 text-sm">
+                  <div className="bg-white rounded-3xl p-6 text-center border border-slate-200/70 text-slate-400 text-sm">
                     Nog geen klusjes! Voeg je eerste klusje toe.
                   </div>
                 ) : availableChores.length === 0 ? (
-                  <div className="bg-white rounded-3xl p-6 text-center border border-emerald-100 space-y-1">
+                  <div className="bg-white rounded-3xl p-6 text-center border border-emerald-200/70 space-y-1">
                     <div className="text-3xl">🎉</div>
                     <p className="text-sm font-bold text-slate-700">
                       Alle klusjes voor {activeMember?.name || 'nu'} zijn even gedaan!
@@ -1267,10 +1292,10 @@ export default function App() {
                       return (
                         <div
                           key={chore.id}
-                          className="bg-white rounded-2xl p-3 shadow-sm border border-slate-100 flex items-center justify-between gap-2"
+                          className="bg-white rounded-2xl p-3 shadow-sm border border-slate-200/70 flex items-center justify-between gap-2"
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-2xl shrink-0">
+                            <div className="w-11 h-11 rounded-xl bg-[#F3F6FB] border border-slate-200/60 flex items-center justify-center text-2xl shrink-0">
                               {chore.emoji}
                             </div>
                             <div className="min-w-0">
@@ -1286,8 +1311,8 @@ export default function App() {
                                   <span
                                     className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5 ${
                                       isIndividual
-                                        ? 'text-violet-700 bg-violet-50'
-                                        : 'text-indigo-600 bg-indigo-50'
+                                        ? 'text-amber-800 bg-amber-50 border border-amber-200/70'
+                                        : 'text-[#153E75] bg-[#E8F0FA]'
                                     }`}
                                     title={isIndividual ? 'Individuele taak (per gezinslid)' : 'Gezinstaak (samen)'}
                                   >
@@ -1303,7 +1328,7 @@ export default function App() {
                           <div className="flex items-center gap-1 shrink-0">
                             <button
                               onClick={() => openEditChoreModal(chore)}
-                              className="p-1.5 text-slate-300 hover:text-indigo-600 transition rounded-xl"
+                              className="p-1.5 text-slate-300 hover:text-[#153E75] transition rounded-xl"
                               title="Klusje bewerken"
                             >
                               <Pencil className="w-3.5 h-3.5" />
@@ -1334,7 +1359,7 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => setShowCompletedChores((v) => !v)}
-                      className="w-full flex items-center justify-between bg-slate-100/80 hover:bg-slate-200/70 text-slate-500 text-xs font-bold px-3.5 py-2.5 rounded-2xl transition"
+                      className="w-full flex items-center justify-between bg-[#E6EDF7] hover:bg-[#DCE6F5] text-[#153E75]/80 text-xs font-bold px-3.5 py-2.5 rounded-2xl transition"
                     >
                       <span className="flex items-center gap-1.5">
                         <Clock className="w-3.5 h-3.5" />
@@ -1351,10 +1376,10 @@ export default function App() {
                           return (
                             <div
                               key={chore.id}
-                              className="bg-slate-100/70 rounded-2xl p-3 border border-slate-200/70 flex items-center justify-between gap-2 opacity-80"
+                              className="bg-white/70 rounded-2xl p-3 border border-slate-200/70 flex items-center justify-between gap-2 opacity-80"
                             >
                               <div className="flex items-center gap-2.5 min-w-0">
-                                <div className="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-lg shrink-0 grayscale">
+                                <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center text-lg shrink-0 grayscale">
                                   {chore.emoji}
                                 </div>
                                 <div className="min-w-0">
@@ -1371,7 +1396,7 @@ export default function App() {
                               <div className="flex items-center gap-1 shrink-0">
                                 <button
                                   onClick={() => openEditChoreModal(chore)}
-                                  className="p-1.5 text-slate-400 hover:text-indigo-600 transition rounded-xl"
+                                  className="p-1.5 text-slate-400 hover:text-[#153E75] transition rounded-xl"
                                   title="Klusje bewerken"
                                 >
                                   <Pencil className="w-3.5 h-3.5" />
@@ -1407,7 +1432,7 @@ export default function App() {
                 </h3>
 
                 {sortedMembers.length === 0 ? (
-                  <div className="bg-white rounded-3xl p-6 text-center border border-slate-100 text-slate-400 text-sm">
+                  <div className="bg-white rounded-3xl p-6 text-center border border-slate-200/70 text-slate-400 text-sm">
                     Nog geen gezinsleden toegevoegd.
                   </div>
                 ) : (
@@ -1419,24 +1444,28 @@ export default function App() {
                         <div
                           key={member.id}
                           className={`bg-white rounded-2xl p-3.5 shadow-sm border flex items-center gap-3 ${
-                            idx === 0 ? 'border-amber-200 bg-amber-50/30' : 'border-slate-100'
+                            idx === 0 ? 'border-amber-300 bg-amber-50/40' : 'border-slate-200/70'
                           }`}
                         >
                           <div className="w-8 text-center font-black text-lg shrink-0">{medal}</div>
-                          <div className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-2xl shrink-0">
+                          <div className="w-11 h-11 rounded-xl bg-[#F3F6FB] border border-slate-200/60 flex items-center justify-center text-2xl shrink-0">
                             {member.avatar}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2">
                               <span className="font-bold text-sm text-slate-800 truncate">{member.name}</span>
-                              <span className="text-sm font-black text-indigo-600 shrink-0">
+                              <span className="text-sm font-black text-[#153E75] shrink-0">
                                 {member.points || 0} pnt
                               </span>
                             </div>
                             <div className="mt-1.5 flex items-center gap-2">
                               <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
                                 <div
-                                  className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full transition-all duration-500"
+                                  className={`h-full rounded-full transition-all duration-500 ${
+                                    idx === 0
+                                      ? 'bg-gradient-to-r from-amber-400 to-orange-400'
+                                      : 'bg-gradient-to-r from-[#153E75] to-[#2B6CB0]'
+                                  }`}
                                   style={{ width: `${share}%` }}
                                 />
                               </div>
@@ -1457,15 +1486,15 @@ export default function App() {
                 </h3>
 
                 {(!data.history || data.history.length === 0) ? (
-                  <div className="bg-white rounded-3xl p-6 text-center border border-slate-100 text-slate-400 text-sm">
+                  <div className="bg-white rounded-3xl p-6 text-center border border-slate-200/70 text-slate-400 text-sm">
                     Nog geen klusjes afgevinkt in deze ronde.
                   </div>
                 ) : (
-                  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm divide-y divide-slate-100 overflow-hidden">
+                  <div className="bg-white rounded-2xl border border-slate-200/70 shadow-sm divide-y divide-slate-100 overflow-hidden">
                     {data.history.map((item) => (
                       <div key={item.id} className="p-3 flex items-center justify-between gap-2.5">
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <span className="text-xl bg-slate-50 w-9 h-9 rounded-xl flex items-center justify-center shrink-0">
+                          <span className="text-xl bg-[#F3F6FB] w-9 h-9 rounded-xl flex items-center justify-center shrink-0">
                             {item.memberAvatar}
                           </span>
                           <div className="min-w-0">
@@ -1503,9 +1532,9 @@ export default function App() {
           {activeTab === 'reward' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               {/* Beloning instellen */}
-              <section className="bg-white rounded-3xl p-4 sm:p-5 shadow-sm border border-slate-100 space-y-4">
+              <section className="bg-white rounded-3xl p-4 sm:p-5 shadow-sm border border-slate-200/70 space-y-4">
                 <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                  <Gift className="w-3.5 h-3.5 text-indigo-500" /> Gezinsbeloning instellen
+                  <Gift className="w-3.5 h-3.5 text-[#153E75]" /> Gezinsbeloning instellen
                 </h3>
 
                 {/* Snelle ideeën */}
@@ -1519,7 +1548,7 @@ export default function App() {
                         setEditRewardEmoji(preset.emoji);
                         setEditRewardTarget(preset.target);
                       }}
-                      className="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold px-2.5 py-1.5 rounded-xl shrink-0 transition"
+                      className="text-xs bg-[#E8F0FA] hover:bg-[#DAE7F7] text-[#153E75] font-semibold px-2.5 py-1.5 rounded-xl shrink-0 transition"
                     >
                       {preset.emoji} {preset.title.split(' ').slice(0, 3).join(' ')}
                     </button>
@@ -1534,7 +1563,7 @@ export default function App() {
                         type="text"
                         value={editRewardEmoji}
                         onChange={(e) => setEditRewardEmoji(e.target.value)}
-                        className="w-full text-center text-xl bg-slate-50 border border-slate-200 rounded-xl py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full text-center text-xl bg-slate-50 border border-slate-200 rounded-xl py-2 focus:outline-none focus:ring-2 focus:ring-[#1E4F91]"
                       />
                     </div>
                     <div className="flex-1">
@@ -1545,7 +1574,7 @@ export default function App() {
                         value={editRewardTitle}
                         onChange={(e) => setEditRewardTitle(e.target.value)}
                         placeholder="Bijv. Samen uit eten"
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#1E4F91]"
                       />
                     </div>
                   </div>
@@ -1560,7 +1589,7 @@ export default function App() {
                         required
                         value={editRewardTarget}
                         onChange={(e) => setEditRewardTarget(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#1E4F91]"
                       />
                     </div>
                     <div>
@@ -1571,14 +1600,14 @@ export default function App() {
                         type="date"
                         value={editRewardDate}
                         onChange={(e) => setEditRewardDate(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#1E4F91]"
                       />
                     </div>
                   </div>
 
                   <button
                     type="submit"
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm py-2.5 rounded-xl shadow-sm transition"
+                    className="w-full bg-[#153E75] hover:bg-[#1E4F91] text-white font-bold text-sm py-2.5 rounded-xl shadow-sm transition"
                   >
                     Beloning opslaan
                   </button>
@@ -1629,7 +1658,7 @@ export default function App() {
                 </h3>
 
                 {(!data.pastRewards || data.pastRewards.length === 0) ? (
-                  <div className="bg-white rounded-3xl p-6 text-center border border-slate-100 text-slate-400 text-sm">
+                  <div className="bg-white rounded-3xl p-6 text-center border border-slate-200/70 text-slate-400 text-sm">
                     Nog geen behaalde beloningen in de trofeeënkast.
                   </div>
                 ) : (
@@ -1637,10 +1666,10 @@ export default function App() {
                     {data.pastRewards.map((pr) => (
                       <div
                         key={pr.id}
-                        className="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-100 flex items-center justify-between gap-3"
+                        className="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-200/70 flex items-center justify-between gap-3"
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <span className="text-2xl bg-amber-50 w-11 h-11 rounded-xl flex items-center justify-center shrink-0">
+                          <span className="text-2xl bg-amber-50 border border-amber-100 w-11 h-11 rounded-xl flex items-center justify-center shrink-0">
                             {pr.emoji || DEFAULT_REWARD_EMOJI}
                           </span>
                           <div className="min-w-0">
@@ -1671,10 +1700,10 @@ export default function App() {
           {/* ============================================================== */}
           {activeTab === 'settings' && (
             <div className="space-y-4 max-w-xl mx-auto">
-              <section className="bg-white rounded-3xl p-4 sm:p-5 shadow-sm border border-slate-100 space-y-4">
+              <section className="bg-white rounded-3xl p-4 sm:p-5 shadow-sm border border-slate-200/70 space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                    <Cloud className="w-4 h-4 text-indigo-500" /> Firebase Live Synchronisatie
+                    <Cloud className="w-4 h-4 text-[#153E75]" /> Firebase Live Synchronisatie
                   </h3>
                   <span
                     className={`text-xs font-bold px-2.5 py-1 rounded-full ${
@@ -1704,13 +1733,13 @@ export default function App() {
                       value={firebaseInput}
                       onChange={(e) => setFirebaseInput(e.target.value)}
                       placeholder="https://jouw-project-default-rtdb.europe-west1.firebasedatabase.app"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E4F91]"
                     />
                   </div>
                   <div className="flex gap-2">
                     <button
                       type="submit"
-                      className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm py-2.5 rounded-xl shadow-sm transition"
+                      className="flex-1 bg-[#153E75] hover:bg-[#1E4F91] text-white font-bold text-sm py-2.5 rounded-xl shadow-sm transition"
                     >
                       Koppelen & Synchroniseren
                     </button>
@@ -1718,7 +1747,7 @@ export default function App() {
                       <button
                         type="button"
                         onClick={() => pullFromFirebase(firebaseUrl, false)}
-                        className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm px-4 py-2.5 rounded-xl flex items-center gap-1.5 transition"
+                        className="bg-[#E8F0FA] hover:bg-[#DAE7F7] text-[#153E75] font-bold text-sm px-4 py-2.5 rounded-xl flex items-center gap-1.5 transition"
                         title="Nu ophalen uit Firebase"
                       >
                         <RefreshCw className={`w-4 h-4 ${syncStatus === 'syncing' ? 'animate-spin' : ''}`} />
@@ -1729,7 +1758,7 @@ export default function App() {
               </section>
 
               {/* Geluidseffecten instellen & testen */}
-              <section className="bg-white rounded-3xl p-4 sm:p-5 shadow-sm border border-slate-100 space-y-3">
+              <section className="bg-white rounded-3xl p-4 sm:p-5 shadow-sm border border-slate-200/70 space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                     <Volume2 className="w-4 h-4 text-amber-500" /> Geluidseffecten
@@ -1755,7 +1784,7 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => playAppSound('chore', 'groot')}
-                    className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs py-2.5 rounded-xl transition"
+                    className="flex-1 bg-[#E8F0FA] hover:bg-[#DAE7F7] text-[#153E75] font-bold text-xs py-2.5 rounded-xl transition"
                   >
                     🔔 Test klusje
                   </button>
@@ -1775,7 +1804,7 @@ export default function App() {
 
       {/* Zwevende Toast Melding */}
       {toast && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-xl flex items-center gap-2 whitespace-nowrap">
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-[#0E2B54] border border-amber-300/40 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-xl flex items-center gap-2 whitespace-nowrap">
           <span className="text-base">{toast.emoji}</span>
           <span>{toast.message}</span>
         </div>
@@ -1783,7 +1812,7 @@ export default function App() {
 
       {/* Onderste Navigatiebalk (met safe-area padding voor Android-knoppen) */}
       <nav
-        className="bg-white border-t border-slate-200 px-2 pt-1.5 shadow-[0_-4px_20px_rgba(0,0,0,0.04)] z-20 shrink-0"
+        className="bg-white border-t border-slate-200/80 px-2 pt-1.5 shadow-[0_-4px_20px_rgba(11,34,69,0.06)] z-20 shrink-0"
         style={{
           paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))',
           paddingLeft: 'max(0.5rem, env(safe-area-inset-left))',
@@ -1805,7 +1834,7 @@ export default function App() {
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex flex-col items-center justify-center py-2 rounded-2xl transition ${
-                  isActive ? 'text-indigo-600 bg-indigo-50/80' : 'text-slate-400 hover:text-slate-600'
+                  isActive ? 'text-[#153E75] bg-[#E8F0FA]' : 'text-slate-400 hover:text-slate-600'
                 }`}
               >
                 <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5]' : 'stroke-2'}`} />
@@ -1820,10 +1849,10 @@ export default function App() {
       {/* MODAL: KLUSJE BEVESTIGEN                                       */}
       {/* ============================================================== */}
       {confirmChore && activeMember && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 flex items-end sm:items-center justify-center p-4">
+        <div className="fixed inset-0 bg-[#0B2245]/60 backdrop-blur-sm z-40 flex items-end sm:items-center justify-center p-4">
           <div className="bg-white w-full max-w-md rounded-3xl p-5 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-extrabold text-base text-slate-800">Klusje bevestigen</h3>
+              <h3 className="font-extrabold text-base text-[#153E75]">Klusje bevestigen</h3>
               <button
                 type="button"
                 onClick={() => setConfirmChore(null)}
@@ -1833,10 +1862,10 @@ export default function App() {
               </button>
             </div>
 
-            <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-3">
+            <div className="bg-[#F3F6FB] border border-slate-200/70 rounded-2xl p-4 space-y-3">
               {/* Gezinslid */}
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-3xl shrink-0">
+                <div className="w-12 h-12 rounded-2xl bg-[#E8F0FA] border border-[#153E75]/15 flex items-center justify-center text-3xl shrink-0">
                   {activeMember.avatar}
                 </div>
                 <div className="min-w-0">
@@ -1886,10 +1915,10 @@ export default function App() {
       {/* MODAL: KLUSJE TOEVOEGEN / BEWERKEN                             */}
       {/* ============================================================== */}
       {showChoreModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 flex items-end sm:items-center justify-center p-4">
+        <div className="fixed inset-0 bg-[#0B2245]/60 backdrop-blur-sm z-40 flex items-end sm:items-center justify-center p-4">
           <div className="bg-white w-full max-w-md max-h-[90dvh] overflow-y-auto rounded-3xl p-5 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-extrabold text-base text-slate-800">
+              <h3 className="font-extrabold text-base text-[#153E75]">
                 {editingChore ? 'Klusje bewerken' : 'Nieuw klusje toevoegen'}
               </h3>
               <button
@@ -1913,7 +1942,7 @@ export default function App() {
                   value={choreTitleInput}
                   onChange={(e) => setChoreTitleInput(e.target.value)}
                   placeholder="Bijv. Konijnen WC verschonen of Eigen bed opmaken"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#1E4F91]"
                 />
               </div>
 
@@ -1926,7 +1955,7 @@ export default function App() {
                       type="button"
                       onClick={() => setChoreEmojiInput(em)}
                       className={`w-10 h-10 rounded-xl text-xl flex items-center justify-center border-2 transition ${
-                        choreEmojiInput === em ? 'border-indigo-500 bg-indigo-50 scale-110' : 'border-slate-100 bg-slate-50'
+                        choreEmojiInput === em ? 'border-[#153E75] bg-[#E8F0FA] scale-110' : 'border-slate-100 bg-slate-50'
                       }`}
                     >
                       {em}
@@ -1945,7 +1974,7 @@ export default function App() {
                       onClick={() => setChoreSizeInput(key)}
                       className={`p-2.5 rounded-xl border-2 text-center transition ${
                         choreSizeInput === key
-                          ? 'border-indigo-600 bg-indigo-50'
+                          ? 'border-[#153E75] bg-[#E8F0FA]'
                           : 'border-slate-100 bg-slate-50'
                       }`}
                     >
@@ -1957,10 +1986,10 @@ export default function App() {
               </div>
 
               {/* Frequentie & Type taak */}
-              <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 space-y-3">
+              <div className="bg-[#F3F6FB] border border-slate-200/80 rounded-2xl p-3 space-y-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-600 mb-1.5 flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-indigo-500" /> Hoe vaak mag dit klusje?
+                    <Clock className="w-3.5 h-3.5 text-[#153E75]" /> Hoe vaak mag dit klusje?
                   </label>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                     {FREQUENCY_OPTIONS.map((opt) => (
@@ -1970,7 +1999,7 @@ export default function App() {
                         onClick={() => setChoreFreqPeriodInput(opt.id)}
                         className={`py-2 px-2 rounded-xl border-2 text-xs font-bold transition ${
                           choreFreqPeriodInput === opt.id
-                            ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
+                            ? 'border-[#153E75] bg-[#E8F0FA] text-[#153E75]'
                             : 'border-slate-200/70 bg-white text-slate-600'
                         }`}
                       >
@@ -2023,7 +2052,7 @@ export default function App() {
                           onClick={() => setChoreTaskTypeInput('family')}
                           className={`p-2.5 rounded-xl border-2 text-left transition flex items-start gap-2 ${
                             choreTaskTypeInput === 'family'
-                              ? 'border-indigo-600 bg-indigo-50 text-indigo-800'
+                              ? 'border-[#153E75] bg-[#E8F0FA] text-[#153E75]'
                               : 'border-slate-200/70 bg-white text-slate-600'
                           }`}
                         >
@@ -2038,7 +2067,7 @@ export default function App() {
                           onClick={() => setChoreTaskTypeInput('individual')}
                           className={`p-2.5 rounded-xl border-2 text-left transition flex items-start gap-2 ${
                             choreTaskTypeInput === 'individual'
-                              ? 'border-violet-600 bg-violet-50 text-violet-800'
+                              ? 'border-amber-500 bg-amber-50 text-amber-900'
                               : 'border-slate-200/70 bg-white text-slate-600'
                           }`}
                         >
@@ -2053,7 +2082,7 @@ export default function App() {
                   </>
                 )}
 
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[11px] text-slate-500">
                   {choreFreqPeriodInput === 'none'
                     ? 'Dit klusje blijft altijd zichtbaar en mag zo vaak als nodig gedaan worden.'
                     : `${
@@ -2072,7 +2101,7 @@ export default function App() {
 
               <button
                 type="submit"
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm py-3 rounded-xl shadow-md"
+                className="w-full bg-[#153E75] hover:bg-[#1E4F91] text-white font-bold text-sm py-3 rounded-xl shadow-md transition"
               >
                 {editingChore ? 'Wijzigingen opslaan' : 'Klusje toevoegen'}
               </button>
@@ -2085,10 +2114,10 @@ export default function App() {
       {/* MODAL: NIEUW GEZINSLID TOEVOEGEN                               */}
       {/* ============================================================== */}
       {showAddMember && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 flex items-end sm:items-center justify-center p-4">
+        <div className="fixed inset-0 bg-[#0B2245]/60 backdrop-blur-sm z-40 flex items-end sm:items-center justify-center p-4">
           <div className="bg-white w-full max-w-md max-h-[90dvh] overflow-y-auto rounded-3xl p-5 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-extrabold text-base text-slate-800">Gezinslid toevoegen</h3>
+              <h3 className="font-extrabold text-base text-[#153E75]">Gezinslid toevoegen</h3>
               <button onClick={() => setShowAddMember(false)} className="p-1 text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
               </button>
@@ -2103,7 +2132,7 @@ export default function App() {
                   value={newMemberName}
                   onChange={(e) => setNewMemberName(e.target.value)}
                   placeholder="Bijv. Sophie of Max"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#1E4F91]"
                 />
               </div>
 
@@ -2116,7 +2145,7 @@ export default function App() {
                       type="button"
                       onClick={() => setNewMemberAvatar(av)}
                       className={`w-10 h-10 rounded-xl text-xl flex items-center justify-center border-2 transition ${
-                        newMemberAvatar === av ? 'border-indigo-500 bg-indigo-50 scale-110' : 'border-slate-100 bg-slate-50'
+                        newMemberAvatar === av ? 'border-[#153E75] bg-[#E8F0FA] scale-110' : 'border-slate-100 bg-slate-50'
                       }`}
                     >
                       {av}
@@ -2127,7 +2156,7 @@ export default function App() {
 
               <button
                 type="submit"
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm py-3 rounded-xl shadow-md"
+                className="w-full bg-[#153E75] hover:bg-[#1E4F91] text-white font-bold text-sm py-3 rounded-xl shadow-md transition"
               >
                 Toevoegen aan gezin
               </button>
@@ -2140,10 +2169,10 @@ export default function App() {
       {/* MODAL: GEZINSLID BEWERKEN / VERWIJDEREN                        */}
       {/* ============================================================== */}
       {editingMember && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 flex items-end sm:items-center justify-center p-4">
+        <div className="fixed inset-0 bg-[#0B2245]/60 backdrop-blur-sm z-40 flex items-end sm:items-center justify-center p-4">
           <div className="bg-white w-full max-w-md max-h-[90dvh] overflow-y-auto rounded-3xl p-5 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-extrabold text-base text-slate-800">Gezinslid bewerken</h3>
+              <h3 className="font-extrabold text-base text-[#153E75]">Gezinslid bewerken</h3>
               <button
                 onClick={() => {
                   setEditingMember(null);
@@ -2163,7 +2192,7 @@ export default function App() {
                   required
                   value={editMemberName}
                   onChange={(e) => setEditMemberName(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#1E4F91]"
                 />
               </div>
 
@@ -2176,7 +2205,7 @@ export default function App() {
                       type="button"
                       onClick={() => setEditMemberAvatar(av)}
                       className={`w-10 h-10 rounded-xl text-xl flex items-center justify-center border-2 transition ${
-                        editMemberAvatar === av ? 'border-indigo-500 bg-indigo-50 scale-110' : 'border-slate-100 bg-slate-50'
+                        editMemberAvatar === av ? 'border-[#153E75] bg-[#E8F0FA] scale-110' : 'border-slate-100 bg-slate-50'
                       }`}
                     >
                       {av}
@@ -2187,7 +2216,7 @@ export default function App() {
 
               <button
                 type="submit"
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm py-3 rounded-xl shadow-md"
+                className="w-full bg-[#153E75] hover:bg-[#1E4F91] text-white font-bold text-sm py-3 rounded-xl shadow-md transition"
               >
                 Wijzigingen opslaan
               </button>
@@ -2234,14 +2263,14 @@ export default function App() {
       {/* MODAL: FEEST! GEZINSDOEL BEHAALD                               */}
       {/* ============================================================== */}
       {showCelebration && (
-        <div className="fixed inset-0 bg-indigo-950/80 backdrop-blur-md z-50 flex items-center justify-center p-5">
+        <div className="fixed inset-0 bg-[#0B2245]/85 backdrop-blur-md z-50 flex items-center justify-center p-5">
           <div className="bg-white w-full max-w-md max-h-[90dvh] overflow-y-auto rounded-3xl p-6 text-center shadow-2xl space-y-4">
             <div className="text-6xl animate-bounce">{data.reward.emoji || DEFAULT_REWARD_EMOJI}</div>
             <div>
-              <span className="inline-block bg-emerald-100 text-emerald-700 text-xs font-extrabold px-3 py-1 rounded-full mb-2">
+              <span className="inline-block bg-amber-100 text-amber-800 text-xs font-extrabold px-3 py-1 rounded-full mb-2">
                 🎉 DOEL BEHAALD! 🎉
               </span>
-              <h2 className="text-xl font-black text-slate-900">Geweldig gedaan samen!</h2>
+              <h2 className="text-xl font-black text-[#153E75]">Geweldig gedaan samen!</h2>
               <p className="text-sm text-slate-600 mt-1">
                 Jullie hebben <strong>{totalPoints} punten</strong> verzameld en daarmee de beloning verdiend:
               </p>
