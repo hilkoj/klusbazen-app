@@ -10,6 +10,14 @@
         padding: 0;
         background-color: #153E75;
       }
+      @keyframes kbTwinkle {
+        0%, 100% { opacity: 0.35; transform: scale(0.85) rotate(0deg); }
+        50% { opacity: 1; transform: scale(1.18) rotate(12deg); }
+      }
+      @keyframes kbPopIn {
+        0% { opacity: 0; transform: scale(0.88); }
+        100% { opacity: 1; transform: scale(1); }
+      }
       #initial-splash {
         position: fixed;
         inset: 0;
@@ -23,6 +31,7 @@
         transition: opacity 0.45s ease;
         user-select: none;
         -webkit-user-select: none;
+        overflow: hidden;
       }
       #initial-splash.fade-out {
         opacity: 0;
@@ -30,13 +39,24 @@
       }
       #initial-splash .splash-glow {
         position: absolute;
-        width: 300px;
-        height: 300px;
+        width: 320px;
+        height: 320px;
         border-radius: 9999px;
-        background: radial-gradient(circle, rgba(251, 191, 36, 0.28) 0%, rgba(251, 191, 36, 0) 70%);
+        background: radial-gradient(circle, rgba(251, 191, 36, 0.30) 0%, rgba(251, 191, 36, 0) 70%);
         filter: blur(28px);
         pointer-events: none;
       }
+      #initial-splash .splash-star {
+        position: absolute;
+        pointer-events: none;
+        animation: kbTwinkle 2.2s ease-in-out infinite;
+      }
+      #initial-splash .splash-star.s1 { top: 20%; left: 16%; width: 28px; height: 28px; animation-delay: 0s; }
+      #initial-splash .splash-star.s2 { top: 24%; right: 18%; width: 20px; height: 20px; animation-delay: 0.5s; }
+      #initial-splash .splash-star.s3 { bottom: 26%; left: 20%; width: 18px; height: 18px; animation-delay: 1.0s; }
+      #initial-splash .splash-star.s4 { bottom: 24%; right: 17%; width: 26px; height: 26px; animation-delay: 0.3s; }
+      #initial-splash .splash-star.s5 { top: 34%; left: 10%; width: 14px; height: 14px; animation-delay: 1.4s; }
+      #initial-splash .splash-star.s6 { top: 36%; right: 11%; width: 14px; height: 14px; animation-delay: 0.8s; }
       #initial-splash .splash-card {
         position: relative;
         z-index: 1;
@@ -45,12 +65,13 @@
         border-radius: 36px;
         overflow: hidden;
         background: #153E75;
-        border: 2px solid rgba(255, 255, 255, 0.18);
+        border: 2px solid rgba(255, 255, 255, 0.20);
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
+        animation: kbPopIn 0.4s ease-out both;
       }
       #initial-splash .splash-card img {
         width: 100%;
@@ -75,6 +96,27 @@
   <body>
     <div id="initial-splash" onclick="this.remove()">
       <div class="splash-glow"></div>
+
+      <!-- Twinkelende sterretjes & sparkles -->
+      <svg class="splash-star s1" viewBox="0 0 24 24" fill="#FCD34D" aria-hidden="true">
+        <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" />
+      </svg>
+      <svg class="splash-star s2" viewBox="0 0 24 24" fill="#FDE68A" aria-hidden="true">
+        <path d="M12 2L14.9 8.6L22 9.3L16.6 14L18.2 21L12 17.3L5.8 21L7.4 14L2 9.3L9.1 8.6L12 2Z" />
+      </svg>
+      <svg class="splash-star s3" viewBox="0 0 24 24" fill="#FFFFFF" aria-hidden="true">
+        <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" />
+      </svg>
+      <svg class="splash-star s4" viewBox="0 0 24 24" fill="#FCD34D" aria-hidden="true">
+        <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" />
+      </svg>
+      <svg class="splash-star s5" viewBox="0 0 24 24" fill="#FDE68A" aria-hidden="true">
+        <path d="M12 2L14.9 8.6L22 9.3L16.6 14L18.2 21L12 17.3L5.8 21L7.4 14L2 9.3L9.1 8.6L12 2Z" />
+      </svg>
+      <svg class="splash-star s6" viewBox="0 0 24 24" fill="#FFFFFF" aria-hidden="true">
+        <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" />
+      </svg>
+
       <div class="splash-card">
         <img
           src="/logo.png"
